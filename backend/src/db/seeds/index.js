@@ -137,13 +137,26 @@ async function seedTrain(transaction) {
       },
       transaction
     );
-    for (const seat of generateSeats(definition))
+    const desiredSeats = generateSeats(definition);
+    for (const seat of desiredSeats)
       await updateOrCreate(
         models.Seat,
         { coachId: coach.id, seatNumber: seat.seatNumber },
         seat,
         transaction
       );
+    await models.Seat.update(
+      { isActive: false },
+      {
+        where: {
+          coachId: coach.id,
+          ...(desiredSeats.length
+            ? { seatNumber: { [Op.notIn]: desiredSeats.map((seat) => seat.seatNumber) } }
+            : {}),
+        },
+        transaction,
+      }
+    );
     coaches.push({ definition, model: coach });
   }
   return { train, coaches };
@@ -352,6 +365,7 @@ async function verify({ users, route, train, journey, fare, config, transaction 
             where: { trainId: train.id, reservationType: 'RESERVED' },
           },
         ],
+        where: { isActive: true },
         transaction,
       })) === 120,
     journeyStations:

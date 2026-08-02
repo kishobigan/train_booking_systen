@@ -155,6 +155,8 @@ const bookingStatusService = new BookingStatusService({
 });
 
 const services = {
+  authService,
+  userService,
   fareCalculationService,
   seatAvailabilityService,
   bookingStatusService,

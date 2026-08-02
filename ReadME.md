@@ -1,100 +1,69 @@
 # Train Booking System
 
-Full-stack train booking application with Node.js/Express backend, Next.js frontend, and PostgreSQL.
+Full-stack railway booking application with an Express/Socket.IO backend, Next.js frontend, PostgreSQL database, and background worker.
 
-## Architecture
+## Docker quick start
 
-| Service    | Port | URL                      |
-|------------|------|--------------------------|
-| Frontend   | 3050 | http://localhost:3050    |
-| Backend    | 4050 | http://localhost:4050    |
-| PostgreSQL | 5433 | localhost:5433 (Docker host mapping) |
+Requirements:
 
-## Quick Start (Docker)
+- Docker Engine or Docker Desktop
+- Docker Compose v2
 
-Run everything with one command:
+Build, initialize, verify, and start the complete application:
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3050
-- Backend API: http://localhost:4050/api/health
-- PostgreSQL: `postgresql://postgres:postgres@localhost:5433/train_booking`
+Compose waits for PostgreSQL, runs pending migrations and the idempotent development seed, starts the API and worker, starts the frontend after API readiness, and finally runs a one-shot smoke verification. Migration or seed failures prevent dependent services from starting.
 
-Stop services:
+Open the frontend using the configured frontend URL. The backend API and WebSocket URLs are defined by the existing frontend environment configuration. Seed credentials are defined by the `SEED_*` variables in [backend/.env.example](backend/.env.example); passwords are never printed by startup or verification.
+
+## Operations
+
+Stop the stack while retaining local data:
 
 ```bash
 docker compose down
 ```
 
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+
-- PostgreSQL 16+ (or use Docker for DB only)
-
-### Database
+Follow logs:
 
 ```bash
-docker compose up postgres -d
+docker compose logs -f
 ```
 
-### Backend
+Inspect service and health status:
 
 ```bash
-cd backend
-cp .env.example .env
-npm install
-npm run db:migrate
-npm run dev
+docker compose ps
 ```
 
-### Frontend
+Re-run the one-shot verification:
 
 ```bash
-cd frontend
-cp .env.example .env.local
-npm install
-npm run dev
+docker compose run --rm smoke-test
 ```
 
-## API Endpoints
+## Clean local reset
 
-| Method | Endpoint          | Description          |
-|--------|-------------------|----------------------|
-| GET    | /api/health       | Health check         |
-| GET    | /api/trains       | List all trains      |
-| GET    | /api/trains/:id   | Get train by ID      |
-| GET    | /api/bookings     | List all bookings    |
-| POST   | /api/bookings     | Create a booking     |
-
-### Create Booking Example
+The following command permanently removes the Compose-managed local database and uploaded bank-slip volumes:
 
 ```bash
-curl -X POST http://localhost:4050/api/bookings \
-  -H "Content-Type: application/json" \
-  -d '{
-    "train_id": 1,
-    "passenger_name": "John Doe",
-    "passenger_email": "john@example.com",
-    "seats_booked": 2
-  }'
+docker compose down --volumes
+docker compose up --build
 ```
 
-## Project Structure
+Only use `--volumes` when deleting all local application data is intentional. Volume deletion is never performed during normal startup.
 
-```
-├── backend/          # Express + PostgreSQL API
-│   └── src/
-│       ├── config/   # Database connection
-│       ├── db/       # Migrations & seed data
-│       └── routes/   # API routes
-├── frontend/         # Next.js app
-│   └── src/
-│       ├── app/      # Pages & layout
-│       ├── components/
-│       └── lib/      # API client
-└── docker-compose.yml
-```
+## Configuration
+
+- Backend, database, authentication, provider, worker, and seed settings: `backend/.env.example`
+- Browser-facing API and WebSocket settings: `frontend/.env.example`
+- Service ports, builds, dependencies, health checks, and persistent volumes: `docker-compose.yml`
+
+Optional Stripe, email, SMS, Redis-backed WebSocket, and bank-payment integrations retain their existing disabled or configured fallback behavior. No optional provider is required for core local startup.
+
+## Local development without full Compose
+
+Install the Node.js version selected by the Dockerfiles, copy the relevant environment examples to local environment files, and use the existing package scripts in `backend/package.json` and `frontend/package.json`.

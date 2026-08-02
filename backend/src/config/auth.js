@@ -2,7 +2,10 @@
 const required = (name, fallback) => process.env[name] || fallback;
 const testSecret = process.env.NODE_ENV === 'test' ? 'test-secret-change-me' : undefined;
 const accessSecret = required('ACCESS_TOKEN_SECRET', required('JWT_SECRET', testSecret));
-const refreshSecret = required('REFRESH_TOKEN_SECRET', required('JWT_REFRESH_SECRET', testSecret));
+const refreshSecret = required(
+  'REFRESH_TOKEN_SECRET',
+  required('JWT_REFRESH_SECRET', accessSecret)
+);
 module.exports = Object.freeze({
   jwtSecret: accessSecret,
   accessSecret,

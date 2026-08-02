@@ -11,8 +11,14 @@ const DEV_USERS = [
     '+94770000001',
     'SuperAdmin@12345',
   ],
-  ['ADMIN', 'Journey Administrator', 'admin@railway.local', '+94770000002', 'Admin@12345'],
-  ['STAFF', 'Colombo Fort Station Staff', 'staff@railway.local', '+94770000003', 'Staff@12345'],
+  ['ADMIN', 'Journey Administrator', 'admin@railway.local', '+94770000002', 'Admin@1234567'],
+  [
+    'STAFF',
+    'Colombo Fort Station Staff',
+    'staff@railway.local',
+    '+94770000003',
+    'Staff@1234567',
+  ],
 ];
 
 function bool(name, fallback = false) {

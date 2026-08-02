@@ -1,3 +1,10 @@
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
+  NODE_ENV: production
+
+x-backend-build: &backend-build
+  context: ./backend
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,52 +24,94 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build: *backend-build
+    command: npm run db:migrate
+    restart: "no"
+    environment: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    build: *backend-build
+    command: npm run db:seed
+    restart: "no"
+    env_file:
+      - ./backend/.env.example
+    environment:
+      <<: *backend-environment
+      ALLOW_DATABASE_SEED: "true"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   backend:
-    build: ./backend
+    build: *backend-build
     command: npm start
     container_name: train_booking_backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env.example
     ports:
       - "4050:4050"
+    volumes:
+      - bank_slips:/app/storage/bank-slips
     environment:
+      <<: *backend-environment
       PORT: 4050
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
-      NODE_ENV: production
+      JOBS_ENABLED: "false"
     depends_on:
-      postgres:
-        condition: service_healthy
-      migrate:
+      seed:
         condition: service_completed_successfully
-
-  migrate:
-    build: ./backend
-    command: sh -c "npm run db:migrate && npm run db:seed"
-    restart: "no"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
-      NODE_ENV: production
-    depends_on:
-      postgres:
-        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/api/v1/health').then(r=>{if(!r.ok)throw new Error(r.status)})",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   worker:
-    build: ./backend
+    build: *backend-build
     command: npm run start:worker
     restart: unless-stopped
+    env_file:
+      - ./backend/.env.example
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
-      NODE_ENV: production
+      <<: *backend-environment
       JOBS_ENABLED: "true"
       JOB_HEALTH_PORT: 4051
+    volumes:
+      - bank_slips:/app/storage/bank-slips
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.JOB_HEALTH_PORT+'/ready').then(r=>{if(!r.ok)throw new Error(r.status)})",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   frontend:
     build:
       context: ./frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:4050
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:4050/api/v1}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-http://localhost:4050}
+        NEXT_PUBLIC_WS_PATH: ${NEXT_PUBLIC_WS_PATH:-/socket.io}
     container_name: train_booking_frontend
     restart: unless-stopped
     ports:
@@ -71,7 +120,37 @@ services:
       PORT: 3050
       HOSTNAME: "0.0.0.0"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+process.env.PORT+'/').then(r=>{if(!r.ok)throw new Error(r.status)})",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  smoke-test:
+    build: *backend-build
+    command: node scripts/smoke-test.js
+    restart: "no"
+    env_file:
+      - ./backend/.env.example
+      - ./frontend/.env.example
+    environment:
+      <<: *backend-environment
+      PORT: 3050
+    depends_on:
+      worker:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  bank_slips:
