@@ -1,8 +1,8 @@
 'use strict';
-const AuthenticationError = require('./AuthenticationError');
-class UserBlockedError extends AuthenticationError {
+const AuthorizationError = require('./AuthorizationError');
+class UserBlockedError extends AuthorizationError {
   constructor() {
-    super('This account is blocked');
+    super('Your account is blocked.');
     this.code = 'USER_BLOCKED';
   }
 }

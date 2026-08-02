@@ -9,13 +9,14 @@ const notFoundMiddleware = require('./common/middleware/not-found.middleware');
 const errorHandlerMiddleware = require('./common/middleware/error-handler.middleware');
 const services = require('./container/services');
 const { stripeWebhookHandler } = require('./modules/payments/payment.routes');
+const corsConfig = require('./config/cors');
 
 function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
   app.use(pinoHttp({ logger }));
-  app.use(cors());
+  app.use(cors(corsConfig));
   app.post(
     '/api/v1/webhooks/stripe',
     express.raw({ type: 'application/json' }),

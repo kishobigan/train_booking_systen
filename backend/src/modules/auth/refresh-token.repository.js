@@ -15,6 +15,12 @@ class RefreshTokenRepository extends BaseRepository {
       where: { tokenHash, revokedAt: null, expiresAt: { [Op.gt]: new Date() } },
     });
   }
+  findByIdForUpdate(id, transaction) {
+    return this.model.scope('withToken').findByPk(id, {
+      transaction,
+      lock: transaction.LOCK?.UPDATE ?? true,
+    });
+  }
   revoke(id, options = {}) {
     return RefreshToken.update(
       { revokedAt: new Date() },

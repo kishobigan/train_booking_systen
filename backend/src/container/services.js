@@ -44,6 +44,8 @@ const EmailProvider = require('../modules/notifications/email.provider');
 const { MockSmsProvider } = require('../modules/notifications/sms.provider');
 const notificationConfig = require('../config/notification');
 const sequelize = require('../database/sequelize');
+const passwordService = require('../lib/password');
+const jwtService = require('../lib/jwt');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -98,6 +100,8 @@ const authService = new AuthService({
   refreshTokenRepository: repositories.refreshTokenRepository,
   auditService,
   transactionManager,
+  passwordService,
+  jwtService,
 });
 const userService = new UserService({
   userRepository: repositories.userRepository,

@@ -11,13 +11,24 @@ module.exports = (authService) => async (req, res, next) => {
     const user = await authService.getCurrentUser(claims.sub);
     req.user = {
       id: user.id,
-      role: user.role,
       fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
       isActive: user.isActive,
       mustChangePassword: user.mustChangePassword,
     };
     next();
   } catch (error) {
+    await authService
+      .recordAuthenticationFailure?.({
+        context: {
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+          requestId: req.id,
+        },
+      })
+      .catch(() => undefined);
     next(error);
   }
 };
