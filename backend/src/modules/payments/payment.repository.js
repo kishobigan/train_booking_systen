@@ -23,5 +23,8 @@ class PaymentRepository extends BaseRepository {
   findForUpdate(id, transaction) {
     return this.findById(id, { transaction, lock: transaction.LOCK.UPDATE });
   }
+  findSuccessfulByBooking(bookingId, options = {}) {
+    return this.findOne({ bookingId, status: 'PAID' }, options);
+  }
 }
 module.exports = PaymentRepository;

@@ -4,6 +4,9 @@ const express = require('express');
 const sequelize = require('../database/sequelize');
 const services = require('../container/services');
 const createFareRouter = require('../modules/fares/fare.routes');
+const createPublicRouter = require('./public.routes');
+const createPassengerRouter = require('./passenger.routes');
+const createAdminRouter = require('./admin.routes');
 
 const router = express.Router();
 
@@ -22,5 +25,8 @@ router.get('/health', async (req, res) => {
 });
 
 router.use('/fares', createFareRouter(services.fareCalculationService));
+router.use(createPublicRouter(services));
+router.use('/passenger', createPassengerRouter(services));
+router.use('/admin', createAdminRouter(services));
 
 module.exports = router;

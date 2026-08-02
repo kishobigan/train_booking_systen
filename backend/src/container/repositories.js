@@ -19,6 +19,8 @@ const repositoryClasses = {
   bookingPassengerRepository: require('../modules/bookings/booking-passenger.repository'),
   bookingSeatRepository: require('../modules/bookings/booking-seat.repository'),
   activeSeatAllocationRepository: require('../modules/bookings/allocation.repository'),
+  availabilityRepository: require('../modules/availability/availability.repository'),
+  bookingStatusRepository: require('../modules/bookings/booking-status.repository'),
   paymentRepository: require('../modules/payments/payment.repository'),
   refundRepository: require('../modules/refunds/refund.repository'),
   waitlistRepository: require('../modules/waitlist/waitlist.repository'),

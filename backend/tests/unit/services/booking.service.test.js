@@ -73,6 +73,14 @@ function fixture(conflicts = []) {
         return fare;
       },
     },
+    seatAvailabilityService: {
+      async revalidateSeatsForBooking() {
+        return { allAvailable: true };
+      },
+    },
+    bookingStatusRepository: {
+      async createStatusHistory() {},
+    },
     transactionProvider: {
       async transaction(callback) {
         return callback({ id: 'tx', LOCK: { UPDATE: 'UPDATE' } });

@@ -12,6 +12,10 @@ const FareRuleClassService = require('../modules/fares/fare-rule-class.service')
 const PassengerFareRuleService = require('../modules/fares/passenger-fare-rule.service');
 const FareCalculationService = require('../modules/fares/fare-calculation.service');
 const BookingService = require('../modules/bookings/booking.service');
+const SeatAvailabilityService = require('../modules/availability/seat-availability.service');
+const BookingStatusService = require('../modules/bookings/booking-status.service');
+const AuditService = require('../modules/audit/audit.service');
+const NotificationService = require('../modules/notifications/notification.service');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -21,9 +25,33 @@ const fareCalculationService = new FareCalculationService({
   fareRuleClassRepository: repositories.fareRuleClassRepository,
   passengerFareRuleRepository: repositories.passengerFareRuleRepository,
 });
+const seatAvailabilityService = new SeatAvailabilityService({
+  journeyRepository: repositories.journeyRepository,
+  journeyStationRepository: repositories.journeyStationRepository,
+  journeyCoachRepository: repositories.journeyCoachRepository,
+  journeySeatRepository: repositories.journeySeatRepository,
+  availabilityRepository: repositories.availabilityRepository,
+  activeSeatAllocationRepository: repositories.activeSeatAllocationRepository,
+});
+const auditService = new AuditService(repositories.auditRepository);
+const notificationService = new NotificationService(repositories.notificationRepository);
+const bookingStatusService = new BookingStatusService({
+  bookingRepository: repositories.bookingRepository,
+  bookingStatusRepository: repositories.bookingStatusRepository,
+  bookingSeatRepository: repositories.bookingSeatRepository,
+  allocationRepository: repositories.activeSeatAllocationRepository,
+  paymentRepository: repositories.paymentRepository,
+  refundRepository: repositories.refundRepository,
+  auditService,
+  notificationService,
+});
 
 module.exports = {
   fareCalculationService,
+  seatAvailabilityService,
+  bookingStatusService,
+  auditService,
+  notificationService,
   fareRuleService: new FareRuleService(repositories.fareRuleRepository),
   fareRuleClassService: new FareRuleClassService(repositories.fareRuleClassRepository),
   passengerFareRuleService: new PassengerFareRuleService(repositories.passengerFareRuleRepository),
@@ -33,6 +61,8 @@ module.exports = {
     bookingSeatRepository: repositories.bookingSeatRepository,
     activeSeatAllocationRepository: repositories.activeSeatAllocationRepository,
     fareCalculationService,
+    seatAvailabilityService,
+    bookingStatusRepository: repositories.bookingStatusRepository,
   }),
   stationService: new StationService(repositories.stationRepository),
   routeService: new RouteService({

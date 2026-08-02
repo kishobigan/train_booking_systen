@@ -26,5 +26,8 @@ class RefundRepository extends BaseRepository {
       ],
     });
   }
+  findSuccessfulByBooking(bookingId, options = {}) {
+    return this.findOne({ bookingId, status: 'REFUNDED' }, options);
+  }
 }
 module.exports = RefundRepository;

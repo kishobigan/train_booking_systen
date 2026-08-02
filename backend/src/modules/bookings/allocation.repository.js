@@ -31,5 +31,40 @@ class ActiveSeatAllocationRepository extends BaseRepository {
       lock: transaction.LOCK.UPDATE,
     });
   }
+  async updateByBooking(bookingId, values, options = {}) {
+    const { BookingSeat } = require('../../models');
+    const bookingSeats = await BookingSeat.findAll({
+      ...options,
+      where: { bookingId },
+      attributes: ['id'],
+    });
+    return this.model.update(values, {
+      ...options,
+      where: { bookingSeatId: { [Op.in]: bookingSeats.map((seat) => seat.id) } },
+    });
+  }
+  async deleteByBooking(bookingId, options = {}) {
+    const { BookingSeat } = require('../../models');
+    const bookingSeats = await BookingSeat.findAll({
+      ...options,
+      where: { bookingId },
+      attributes: ['id'],
+    });
+    return this.model.destroy({
+      ...options,
+      where: { bookingSeatId: { [Op.in]: bookingSeats.map((seat) => seat.id) } },
+    });
+  }
+  deleteExpiredHoldsForSeats(journeyId, seatIds, transaction, referenceDate = new Date()) {
+    return this.model.destroy({
+      transaction,
+      where: {
+        journeyId,
+        seatId: { [Op.in]: seatIds },
+        allocationType: 'HELD',
+        expiresAt: { [Op.lte]: referenceDate },
+      },
+    });
+  }
 }
 module.exports = ActiveSeatAllocationRepository;

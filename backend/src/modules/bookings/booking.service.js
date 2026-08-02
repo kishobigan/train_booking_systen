@@ -13,6 +13,8 @@ class BookingService {
     bookingSeatRepository,
     activeSeatAllocationRepository,
     fareCalculationService,
+    seatAvailabilityService,
+    bookingStatusRepository,
     transactionProvider = sequelize,
     holdMinutes = Number(process.env.BOOKING_HOLD_MINUTES || 15),
     clock = () => new Date(),
@@ -22,6 +24,8 @@ class BookingService {
     this.bookingSeatRepository = bookingSeatRepository;
     this.activeSeatAllocationRepository = activeSeatAllocationRepository;
     this.fareCalculationService = fareCalculationService;
+    this.seatAvailabilityService = seatAvailabilityService;
+    this.bookingStatusRepository = bookingStatusRepository;
     this.transactionProvider = transactionProvider;
     this.holdMinutes = holdMinutes;
     this.clock = clock;
@@ -50,6 +54,13 @@ class BookingService {
       const holdExpiresAt = new Date(this.clock().getTime() + this.holdMinutes * 60_000);
       const selectedSeat = fare.coach.journeySeatId ? fare.coach : null;
       if (selectedSeat) {
+        await this.seatAvailabilityService.revalidateSeatsForBooking({
+          journeyId: input.journeyId,
+          journeySeatIds: [selectedSeat.journeySeatId],
+          originSequence: fare.origin.sequenceNumber,
+          destinationSequence: fare.destination.sequenceNumber,
+          transaction: transactionOptions.transaction,
+        });
         const conflicts = await this.activeSeatAllocationRepository.lockConflicts(
           input.journeyId,
           selectedSeat.seatId,
@@ -131,6 +142,17 @@ class BookingService {
           transactionOptions
         );
       }
+      await this.bookingStatusRepository.createStatusHistory(
+        {
+          bookingId: booking.id,
+          previousStatus: null,
+          newStatus: BOOKING_STATUS.HELD,
+          changedByUserId: input.userId,
+          reason: 'Seat hold created.',
+          metadata: { source: 'booking-service' },
+        },
+        transactionOptions
+      );
       return { booking, passengers: passengerRecords, fareBreakdown: fare };
     });
   }
