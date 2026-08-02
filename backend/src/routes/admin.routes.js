@@ -6,6 +6,7 @@ const AuthenticationError = require('../common/errors/AuthenticationError');
 const AuthorizationError = require('../common/errors/AuthorizationError');
 const requirePasswordChanged = require('../common/middleware/require-password-change.middleware');
 const { createAdminPaymentRouter } = require('../modules/payments/payment.routes');
+const { createAdminWaitlistRouter } = require('../modules/waitlist/waitlist.routes');
 
 function requireAdmin(req, res, next) {
   void res;
@@ -21,6 +22,7 @@ function createAdminRouter(services) {
   router.use(requireAdmin);
   router.use(requirePasswordChanged);
   router.use(createAdminPaymentRouter(services));
+  router.use(createAdminWaitlistRouter(services));
   router.patch('/bookings/:bookingId/status', controller.updateStatus);
   router.get('/journeys/:journeyId/bookings', controller.getJourneyBookings);
   router.post('/bookings/:bookingId/complete', controller.completeBooking);

@@ -33,6 +33,10 @@ const IdempotencyService = require('../modules/payments/idempotency.service');
 const RefundService = require('../modules/refunds/refund.service');
 const { LocalFileStorageProvider } = require('../lib/file-storage');
 const paymentConfig = require('../config/payment');
+const WaitlistService = require('../modules/waitlist/waitlist.service');
+const WaitlistOfferService = require('../modules/waitlist/waitlist-offer.service');
+const WaitlistPriorityService = require('../modules/waitlist/waitlist-priority.service');
+const waitlistConfig = require('../config/waitlist');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -171,6 +175,34 @@ const services = {
 
 const stripePaymentService = new StripePaymentService();
 const idempotencyService = new IdempotencyService(repositories.idempotencyRepository);
+const waitlistPriorityService = new WaitlistPriorityService();
+const waitlistOfferService = new WaitlistOfferService({
+  waitlistRepository: repositories.waitlistRepository,
+  allocationRepository: repositories.activeSeatAllocationRepository,
+  seatAvailabilityService,
+  transactionManager,
+  notificationService,
+  auditService,
+  config: waitlistConfig,
+});
+const waitlistService = new WaitlistService({
+  waitlistRepository: repositories.waitlistRepository,
+  allocationRepository: repositories.activeSeatAllocationRepository,
+  journeyService: services.journeyService,
+  journeyStationRepository: repositories.journeyStationRepository,
+  journeyCoachRepository: repositories.journeyCoachRepository,
+  seatAvailabilityService,
+  fareCalculationService,
+  bookingService: services.bookingService,
+  waitlistOfferService,
+  waitlistPriorityService,
+  transactionManager,
+  notificationService,
+  auditService,
+  accessControlService,
+  idempotencyService,
+  config: waitlistConfig,
+});
 const paymentService = new PaymentService({
   paymentRepository: repositories.paymentRepository,
   bookingRepository: repositories.bookingRepository,
@@ -229,6 +261,9 @@ const paymentReconciliationService = new PaymentReconciliationService({
   transactionManager,
 });
 Object.assign(services, {
+  waitlistService,
+  waitlistOfferService,
+  waitlistPriorityService,
   paymentService,
   refundService,
   bankSlipService,

@@ -34,6 +34,7 @@ class WaitlistEntry extends Model {
         offeredSeatId: { type: DataTypes.UUID },
         offerExpiresAt: { type: DataTypes.DATE },
         convertedBookingId: { type: DataTypes.UUID, unique: true },
+        offerAttemptCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
         contactName: requiredString(150),
         contactEmail: { type: DataTypes.CITEXT, validate: { isEmail: true } },
         contactPhone: string(30),
@@ -57,6 +58,10 @@ class WaitlistEntry extends Model {
     WaitlistEntry.belongsTo(models.Booking, {
       as: 'convertedBooking',
       foreignKey: 'convertedBookingId',
+    });
+    WaitlistEntry.hasMany(models.ActiveSeatAllocation, {
+      as: 'offerAllocations',
+      foreignKey: 'waitlistEntryId',
     });
   }
 }

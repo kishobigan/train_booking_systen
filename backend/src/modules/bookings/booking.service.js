@@ -56,15 +56,20 @@ class BookingService {
       throw new ValidationError(
         'Durable idempotency is unavailable until the idempotency_keys migration is added'
       );
-    const journey = await this.journeyService.getJourney(input.journeyId);
+    const queryOptions = input.transaction ? { transaction: input.transaction } : {};
+    const journey = await this.journeyService.getJourney(input.journeyId, queryOptions);
     this.validateJourneyForBooking(journey);
     this.validateBookingWindow(journey);
-    const resolved = await this.seatAvailabilityService.resolveSegmentSequences(input);
+    const resolved = await this.seatAvailabilityService.resolveSegmentSequences(
+      input,
+      queryOptions
+    );
     const journeySeatIds = input.passengers.map((passenger) => passenger.journeySeatId);
     const preview = await this.seatAvailabilityService.checkMultipleSeatsAvailability({
       journeyId: input.journeyId,
       journeySeatIds,
       ...resolved.segment,
+      transaction: input.transaction,
     });
     if (!preview.allAvailable)
       throw new BookingConflictError('One or more selected seats are unavailable', {
@@ -80,119 +85,122 @@ class BookingService {
       coachClass: preview.seats[0].coachClass,
       passengers: input.passengers.map(({ passengerType }) => ({ passengerType })),
     });
-    try {
-      return await this.transactionManager.executeSerializable(async (transaction) => {
-        const physicalSeatIds = preview.seats.map((seat) => seat.seatId);
-        await this.allocationService.repository.acquireSeatLocks({
+    const operation = async (transaction) => {
+      const physicalSeatIds = preview.seats.map((seat) => seat.seatId);
+      await this.allocationService.repository.acquireSeatLocks({
+        journeyId: input.journeyId,
+        seatIds: physicalSeatIds,
+        transaction,
+      });
+      const revalidated = await this.seatAvailabilityService.revalidateSeatsForBooking({
+        journeyId: input.journeyId,
+        journeySeatIds,
+        ...resolved.segment,
+        transaction,
+      });
+      const seatsById = new Map(revalidated.seats.map((seat) => [seat.journeySeatId, seat]));
+      const holdExpiresAt = new Date(this.clock().getTime() + this.holdMinutes * 60_000);
+      const booking = await this.bookingRepository.create(
+        {
+          bookingReference: this.generateBookingReference(),
+          userId: input.userId,
           journeyId: input.journeyId,
-          seatIds: physicalSeatIds,
-          transaction,
-        });
-        const revalidated = await this.seatAvailabilityService.revalidateSeatsForBooking({
-          journeyId: input.journeyId,
-          journeySeatIds,
-          ...resolved.segment,
-          transaction,
-        });
-        const seatsById = new Map(revalidated.seats.map((seat) => [seat.journeySeatId, seat]));
-        const holdExpiresAt = new Date(this.clock().getTime() + this.holdMinutes * 60_000);
-        const booking = await this.bookingRepository.create(
-          {
-            bookingReference: this.generateBookingReference(),
-            userId: input.userId,
-            journeyId: input.journeyId,
-            originJourneyStationId: input.originJourneyStationId,
-            destinationJourneyStationId: input.destinationJourneyStationId,
-            originSequence: resolved.segment.originSequence,
-            destinationSequence: resolved.segment.destinationSequence,
-            contactName: input.contact.fullName,
-            contactEmail: input.contact.email,
-            contactPhone: input.contact.phone,
-            passengerCount: input.passengers.length,
-            subtotal: fare.totals.passengerSubtotal,
-            discountAmount: fare.totals.discountTotal,
-            serviceFee: fare.totals.serviceFee,
-            taxAmount: fare.totals.taxAmount,
-            totalAmount: fare.totals.finalTotal,
-            currency: fare.totals.currency,
+          originJourneyStationId: input.originJourneyStationId,
+          destinationJourneyStationId: input.destinationJourneyStationId,
+          originSequence: resolved.segment.originSequence,
+          destinationSequence: resolved.segment.destinationSequence,
+          contactName: input.contact.fullName,
+          contactEmail: input.contact.email,
+          contactPhone: input.contact.phone,
+          passengerCount: input.passengers.length,
+          subtotal: fare.totals.passengerSubtotal,
+          discountAmount: fare.totals.discountTotal,
+          serviceFee: fare.totals.serviceFee,
+          taxAmount: fare.totals.taxAmount,
+          totalAmount: fare.totals.finalTotal,
+          currency: fare.totals.currency,
+          status: BOOKING_STATUS.HELD,
+          holdExpiresAt,
+        },
+        { transaction }
+      );
+      const passengers = await this.bookingPassengerService.bulkCreatePassengers({
+        bookingId: booking.id,
+        passengers: input.passengers,
+        fareBreakdown: fare,
+        assignedSeatIds: input.passengers.map(
+          (passenger) => seatsById.get(passenger.journeySeatId).seatId
+        ),
+        transaction,
+      });
+      const bookingSeats = await this.bookingSeatService.bulkCreateBookingSeats({
+        seats: input.passengers.map((passenger, index) => {
+          const seat = seatsById.get(passenger.journeySeatId);
+          return {
+            bookingId: booking.id,
+            bookingPassengerId: passengers[index].id,
+            journeyId: booking.journeyId,
+            journeySeatId: seat.journeySeatId,
+            seatId: seat.seatId,
+            ...resolved.segment,
             status: BOOKING_STATUS.HELD,
             holdExpiresAt,
-          },
-          { transaction }
-        );
-        const passengers = await this.bookingPassengerService.bulkCreatePassengers({
-          bookingId: booking.id,
-          passengers: input.passengers,
-          fareBreakdown: fare,
-          assignedSeatIds: input.passengers.map(
-            (passenger) => seatsById.get(passenger.journeySeatId).seatId
-          ),
-          transaction,
-        });
-        const bookingSeats = await this.bookingSeatService.bulkCreateBookingSeats({
-          seats: input.passengers.map((passenger, index) => {
-            const seat = seatsById.get(passenger.journeySeatId);
-            return {
-              bookingId: booking.id,
-              bookingPassengerId: passengers[index].id,
-              journeyId: booking.journeyId,
-              journeySeatId: seat.journeySeatId,
-              seatId: seat.seatId,
-              ...resolved.segment,
-              status: BOOKING_STATUS.HELD,
-              holdExpiresAt,
-              seatNumberSnapshot: seat.seatNumber,
-              coachNumberSnapshot: seat.coachNumber,
-              coachClassSnapshot: seat.coachClass,
-              fareAmount: fare.passengers[index].fareAfterDiscount,
-            };
-          }),
-          transaction,
-        });
-        await this.allocationService.createAllocations({
-          allocations: bookingSeats.map((bookingSeat) => ({
-            bookingSeatId: bookingSeat.id,
-            journeyId: booking.journeyId,
-            seatId: bookingSeat.seatId,
-            ...resolved.segment,
-            allocationType: BOOKING_STATUS.HELD,
-            expiresAt: holdExpiresAt,
-          })),
-          transaction,
-        });
-        await this.bookingStatusRepository.createStatusHistory(
-          {
-            bookingId: booking.id,
-            previousStatus: null,
-            newStatus: BOOKING_STATUS.HELD,
-            changedByUserId: input.userId,
-            reason: 'Seat hold created.',
-            metadata: { source: 'booking-service' },
-          },
-          { transaction }
-        );
-        if (this.auditService?.record)
-          await this.auditService.record(
-            {
-              userId: input.userId,
-              action: 'BOOKING_CREATED',
-              entityType: 'Booking',
-              entityId: booking.id,
-              newValues: { status: BOOKING_STATUS.HELD, journeyId: booking.journeyId },
-            },
-            { transaction }
-          );
-        transaction.afterCommit?.(() =>
-          this.notificationService?.bookingStatusChanged({ booking, previousStatus: null })
-        );
-        return this.#holdResult(
-          booking,
-          resolved.segment,
-          input.passengers,
-          passengers,
-          revalidated.seats
-        );
+            seatNumberSnapshot: seat.seatNumber,
+            coachNumberSnapshot: seat.coachNumber,
+            coachClassSnapshot: seat.coachClass,
+            fareAmount: fare.passengers[index].fareAfterDiscount,
+          };
+        }),
+        transaction,
       });
+      await this.allocationService.createAllocations({
+        allocations: bookingSeats.map((bookingSeat) => ({
+          bookingSeatId: bookingSeat.id,
+          journeyId: booking.journeyId,
+          seatId: bookingSeat.seatId,
+          ...resolved.segment,
+          allocationType: BOOKING_STATUS.HELD,
+          expiresAt: holdExpiresAt,
+        })),
+        transaction,
+      });
+      await this.bookingStatusRepository.createStatusHistory(
+        {
+          bookingId: booking.id,
+          previousStatus: null,
+          newStatus: BOOKING_STATUS.HELD,
+          changedByUserId: input.userId,
+          reason: 'Seat hold created.',
+          metadata: { source: 'booking-service' },
+        },
+        { transaction }
+      );
+      if (this.auditService?.record)
+        await this.auditService.record(
+          {
+            userId: input.userId,
+            action: 'BOOKING_CREATED',
+            entityType: 'Booking',
+            entityId: booking.id,
+            newValues: { status: BOOKING_STATUS.HELD, journeyId: booking.journeyId },
+          },
+          { transaction }
+        );
+      transaction.afterCommit?.(() =>
+        this.notificationService?.bookingStatusChanged({ booking, previousStatus: null })
+      );
+      return this.#holdResult(
+        booking,
+        resolved.segment,
+        input.passengers,
+        passengers,
+        revalidated.seats
+      );
+    };
+    try {
+      return input.transaction
+        ? await operation(input.transaction)
+        : await this.transactionManager.executeSerializable(operation);
     } catch (error) {
       throw mapDatabaseError(error);
     }

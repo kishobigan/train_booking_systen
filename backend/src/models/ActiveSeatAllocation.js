@@ -7,7 +7,9 @@ class ActiveSeatAllocation extends Model {
     ActiveSeatAllocation.init(
       {
         id: id(),
-        bookingSeatId: foreignKey({ unique: true }),
+        bookingSeatId: { type: DataTypes.UUID, unique: true },
+        waitlistEntryId: { type: DataTypes.UUID },
+        journeySeatId: { type: DataTypes.UUID },
         journeyId: foreignKey(),
         seatId: foreignKey(),
         occupiedSegment: { type: DataTypes.RANGE(DataTypes.INTEGER), allowNull: false },
@@ -27,6 +29,14 @@ class ActiveSeatAllocation extends Model {
     });
     ActiveSeatAllocation.belongsTo(models.Journey, { as: 'journey', foreignKey: 'journeyId' });
     ActiveSeatAllocation.belongsTo(models.Seat, { as: 'seat', foreignKey: 'seatId' });
+    ActiveSeatAllocation.belongsTo(models.WaitlistEntry, {
+      as: 'waitlistEntry',
+      foreignKey: 'waitlistEntryId',
+    });
+    ActiveSeatAllocation.belongsTo(models.JourneySeat, {
+      as: 'journeySeat',
+      foreignKey: 'journeySeatId',
+    });
   }
 }
 module.exports = ActiveSeatAllocation;

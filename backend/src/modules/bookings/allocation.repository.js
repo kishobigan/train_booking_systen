@@ -10,6 +10,26 @@ class ActiveSeatAllocationRepository extends BaseRepository {
   findByBookingSeat(bookingSeatId, options = {}) {
     return this.findOne({ bookingSeatId }, options);
   }
+  findByWaitlistEntry(waitlistEntryId, options = {}) {
+    return this.findAll({ waitlistEntryId }, { ...options, order: [['createdAt', 'ASC']] });
+  }
+  createWaitlistAllocations(allocations, options = {}) {
+    return this.bulkCreate(
+      allocations.map((allocation) => ({
+        waitlistEntryId: allocation.waitlistEntryId,
+        journeySeatId: allocation.journeySeatId,
+        journeyId: allocation.journeyId,
+        seatId: allocation.seatId,
+        occupiedSegment: [allocation.originSequence, allocation.destinationSequence],
+        allocationType: 'HELD',
+        expiresAt: allocation.expiresAt,
+      })),
+      options
+    );
+  }
+  deleteByWaitlistEntry(waitlistEntryId, options = {}) {
+    return this.model.destroy({ ...options, where: { waitlistEntryId } });
+  }
   findConflicts(journeyId, seatId, originSequence, destinationSequence, options = {}) {
     return this.findAll(
       {

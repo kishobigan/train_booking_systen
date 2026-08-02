@@ -22,5 +22,21 @@ class NotificationService {
       options
     );
   }
+  waitlistStatusChanged({ entry, event }, options = {}) {
+    if (!entry.contactEmail) return null;
+    return this.repository.create(
+      {
+        userId: entry.userId,
+        channel: 'EMAIL',
+        destination: entry.contactEmail,
+        templateCode: `WAITLIST_${event}`,
+        subject: `Waitlist status: ${event}`,
+        content: `Your waitlist request for journey ${entry.journeyId} is now ${event}.`,
+        status: 'PENDING',
+        scheduledAt: new Date(),
+      },
+      options
+    );
+  }
 }
 module.exports = NotificationService;
