@@ -1,0 +1,1 @@
+'use client'; import {useEffect,useState} from 'react'; export function useDebounce<T>(value:T,delay=300){const [result,setResult]=useState(value);useEffect(()=>{const id=setTimeout(()=>setResult(value),delay);return()=>clearTimeout(id)},[delay,value]);return result}

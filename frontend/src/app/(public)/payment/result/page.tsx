@@ -1,0 +1,1 @@
+import Link from 'next/link'; export default function PaymentResult(){return <div className="shell center"><h1>Checking your payment</h1><p className="muted">Return to the booking payment page to view backend-confirmed status.</p><Link className="button" href="/bookings">View bookings</Link></div>}

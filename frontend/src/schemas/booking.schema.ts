@@ -1,0 +1,4 @@
+import { z } from 'zod';
+export const passengerSchema=z.object({fullName:z.string().trim().min(2).max(150),passengerType:z.enum(['ADULT','CHILD','SENIOR','INFANT']),identityType:z.string().optional(),identityNumber:z.string().max(80).optional(),dateOfBirth:z.string().optional(),journeySeatId:z.string().uuid()});
+export const bookingSchema=z.object({passengers:z.array(passengerSchema).min(1).max(6),contact:z.object({fullName:z.string().trim().min(2).max(150),email:z.string().email().or(z.literal('')),phone:z.string().max(30).optional()}),policyAccepted:z.literal(true,{errorMap:()=>({message:'Accept the booking policy to continue.'})})}).refine(v=>Boolean(v.contact.email||v.contact.phone),{message:'Enter an email address or phone number.',path:['contact','email']});
+export type BookingFormValues=z.infer<typeof bookingSchema>;

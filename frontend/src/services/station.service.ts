@@ -1,0 +1,2 @@
+import {apiClient} from './http/api-client'; import {unwrap} from './http/api-response'; import {Station} from '@/types/domain';
+export const stationService={getStations:async()=>unwrap<Station[]>((await apiClient.get('/stations')).data),getStationDetails:async(id:string)=>unwrap<Station>((await apiClient.get(`/stations/${id}`)).data),searchStations:async(q:string)=>{const data=unwrap<{items:Station[]}>((await apiClient.get('/stations/search',{params:{q,limit:20}})).data);return data.items;}};

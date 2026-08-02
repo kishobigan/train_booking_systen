@@ -1,0 +1,2 @@
+import {apiClient} from './http/api-client'; import {unwrap} from './http/api-response';
+export const journeyService={searchJourneys:async(params:Record<string,unknown>,signal?:AbortSignal)=>unwrap<{search:unknown;items:Record<string,any>[]} >((await apiClient.get('/journeys/search',{params,signal})).data),getJourneyDetails:async(id:string)=>unwrap<Record<string,any>>((await apiClient.get(`/journeys/${id}`)).data)};

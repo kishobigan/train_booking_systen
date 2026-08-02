@@ -1,0 +1,1 @@
+'use client'; import {useQuery} from '@tanstack/react-query'; import {bookingService} from '@/services/booking.service'; export function useTicket(id:string){return useQuery({queryKey:['ticket',id],queryFn:()=>bookingService.getTicket(id),enabled:Boolean(id),refetchInterval:q=>['PENDING','HELD','PAYMENT_PENDING'].includes(String((q.state.data as any)?.status))?4000:false})}

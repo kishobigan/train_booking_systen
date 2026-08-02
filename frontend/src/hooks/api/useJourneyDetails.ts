@@ -1,0 +1,1 @@
+'use client'; import {useQuery} from '@tanstack/react-query'; import {journeyService} from '@/services/journey.service'; import {queryKeys} from '@/constants/query-keys'; export function useJourneyDetails(id:string){return useQuery({queryKey:queryKeys.journeys.details(id),queryFn:()=>journeyService.getJourneyDetails(id),enabled:Boolean(id)})}

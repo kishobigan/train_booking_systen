@@ -1,0 +1,1 @@
+import {PaymentPageView} from '@/components/payments/PaymentPageView'; export default async function PaymentPage({params}:{params:Promise<{bookingId:string}>}){return <PaymentPageView bookingId={(await params).bookingId}/>}

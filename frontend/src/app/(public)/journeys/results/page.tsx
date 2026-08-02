@@ -1,0 +1,1 @@
+import {Suspense} from 'react'; import {JourneyResultsView} from '@/components/journeys/JourneyResultsView'; import {LoadingState} from '@/components/ui/StatusState'; export default function ResultsPage(){return <Suspense fallback={<LoadingState label="Reading your search…"/>}><JourneyResultsView/></Suspense>}

@@ -1,0 +1,1 @@
+import {apiClient} from './http/api-client'; import {unwrap} from './http/api-response'; export const fareService={quoteFare:async(input:unknown)=>unwrap<Record<string,any>>((await apiClient.post('/fares/quote',input)).data)};

@@ -1,0 +1,1 @@
+'use client'; import {useRef} from 'react'; export function useIdempotencyKey(){const ref=useRef(globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`);return {key:ref.current,renew:()=>{ref.current=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`;return ref.current}}}

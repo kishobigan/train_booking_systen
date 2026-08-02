@@ -1,0 +1,1 @@
+'use client'; import {useQuery} from '@tanstack/react-query'; import {bookingService} from '@/services/booking.service'; import {queryKeys} from '@/constants/query-keys'; export function useBookingDetails(id:string){return useQuery({queryKey:queryKeys.bookings.details(id),queryFn:()=>bookingService.getBookingDetails(id),enabled:Boolean(id)})}

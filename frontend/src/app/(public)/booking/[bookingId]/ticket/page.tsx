@@ -1,0 +1,1 @@
+import {TicketPageView} from '@/components/tickets/TicketPageView'; export default async function TicketPage({params}:{params:Promise<{bookingId:string}>}){return <TicketPageView bookingId={(await params).bookingId}/>}

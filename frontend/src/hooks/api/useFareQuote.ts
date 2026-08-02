@@ -1,0 +1,1 @@
+'use client'; import {useQuery} from '@tanstack/react-query'; import {fareService} from '@/services/fare.service'; export function useFareQuote(input:Record<string,unknown>|null){return useQuery({queryKey:['fare-quote',input],queryFn:()=>fareService.quoteFare(input),enabled:Boolean(input)})}
