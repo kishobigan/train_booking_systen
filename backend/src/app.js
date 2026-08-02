@@ -5,6 +5,8 @@ const cors = require('cors');
 const pinoHttp = require('pino-http');
 const logger = require('./config/logger');
 const apiV1Router = require('./routes');
+const notFoundMiddleware = require('./common/middleware/not-found.middleware');
+const errorHandlerMiddleware = require('./common/middleware/error-handler.middleware');
 
 function createApp() {
   const app = express();
@@ -19,15 +21,8 @@ function createApp() {
   });
   app.use('/api/v1', apiV1Router);
 
-  app.use((req, res) => {
-    res.status(404).json({ error: 'Not found' });
-  });
-
-  app.use((err, req, res, next) => {
-    req.log.error({ err }, 'Unhandled request error');
-    if (res.headersSent) return next(err);
-    return res.status(500).json({ error: 'Internal server error' });
-  });
+  app.use(notFoundMiddleware);
+  app.use(errorHandlerMiddleware);
 
   return app;
 }
