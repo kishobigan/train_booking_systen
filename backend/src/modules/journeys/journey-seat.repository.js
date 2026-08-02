@@ -1,6 +1,6 @@
 'use strict';
 const BaseRepository = require('../../common/repositories/BaseRepository');
-const { JourneySeat, Seat, JourneyCoach } = require('../../models');
+const { JourneySeat, Seat, JourneyCoach, Journey, Route } = require('../../models');
 class JourneySeatRepository extends BaseRepository {
   constructor() {
     super(JourneySeat);
@@ -22,6 +22,20 @@ class JourneySeatRepository extends BaseRepository {
   }
   findByJourneyAndSeat(journeyId, seatId, options = {}) {
     return this.findOne({ journeyId, seatId }, options);
+  }
+  findByIdWithCoach(id, options = {}) {
+    return this.findById(id, {
+      ...options,
+      include: options.include || [
+        { model: Seat, as: 'seat' },
+        { model: JourneyCoach, as: 'journeyCoach' },
+        {
+          model: Journey,
+          as: 'journey',
+          include: [{ model: Route, as: 'route' }],
+        },
+      ],
+    });
   }
   deleteByJourney(journeyId, options = {}) {
     return this.model.destroy({ ...options, where: { journeyId } });

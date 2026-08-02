@@ -13,6 +13,8 @@ const repositoryClasses = {
   journeyCoachRepository: require('../modules/journeys/journey-coach.repository'),
   journeySeatRepository: require('../modules/journeys/journey-seat.repository'),
   fareRuleRepository: require('../modules/fares/fare-rule.repository'),
+  fareRuleClassRepository: require('../modules/fares/fare-rule-class.repository'),
+  passengerFareRuleRepository: require('../modules/fares/passenger-fare-rule.repository'),
   bookingRepository: require('../modules/bookings/booking.repository'),
   bookingPassengerRepository: require('../modules/bookings/booking-passenger.repository'),
   bookingSeatRepository: require('../modules/bookings/booking-seat.repository'),

@@ -2,6 +2,8 @@
 
 const express = require('express');
 const sequelize = require('../database/sequelize');
+const services = require('../container/services');
+const createFareRouter = require('../modules/fares/fare.routes');
 
 const router = express.Router();
 
@@ -18,5 +20,7 @@ router.get('/health', async (req, res) => {
     res.status(503).json({ status: 'error', database: 'disconnected', version: 'v1' });
   }
 });
+
+router.use('/fares', createFareRouter(services.fareCalculationService));
 
 module.exports = router;
