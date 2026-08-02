@@ -28,5 +28,17 @@ class BookingSeatRepository extends BaseRepository {
   findForUpdate(id, transaction) {
     return this.findById(id, { transaction, lock: transaction.LOCK.UPDATE });
   }
+  findByPassenger(bookingId, bookingPassengerId, options = {}) {
+    return this.findOne({ bookingId, bookingPassengerId }, options);
+  }
+  countByBooking(bookingId, options = {}) {
+    return this.count({ bookingId }, options);
+  }
+  updateStatusesByBooking(bookingId, status, options = {}) {
+    return this.model.update({ status }, { ...options, where: { bookingId } });
+  }
+  deleteByPassenger(bookingId, bookingPassengerId, options = {}) {
+    return this.model.destroy({ ...options, where: { bookingId, bookingPassengerId } });
+  }
 }
 module.exports = BookingSeatRepository;

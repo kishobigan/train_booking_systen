@@ -16,6 +16,11 @@ const SeatAvailabilityService = require('../modules/availability/seat-availabili
 const BookingStatusService = require('../modules/bookings/booking-status.service');
 const AuditService = require('../modules/audit/audit.service');
 const NotificationService = require('../modules/notifications/notification.service');
+const BookingPassengerService = require('../modules/bookings/booking-passenger.service');
+const BookingSeatService = require('../modules/bookings/booking-seat.service');
+const AllocationService = require('../modules/bookings/allocation.service');
+const TransactionManager = require('../lib/transaction-manager');
+const fareConfig = require('../config/fare');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -35,6 +40,26 @@ const seatAvailabilityService = new SeatAvailabilityService({
 });
 const auditService = new AuditService(repositories.auditRepository);
 const notificationService = new NotificationService(repositories.notificationRepository);
+const transactionManager = new TransactionManager();
+const bookingPassengerService = new BookingPassengerService({
+  bookingPassengerRepository: repositories.bookingPassengerRepository,
+  journeySeatRepository: repositories.journeySeatRepository,
+  bookingRepository: repositories.bookingRepository,
+  bookingSeatRepository: repositories.bookingSeatRepository,
+  allocationService: undefined,
+  seatAvailabilityService,
+  transactionManager,
+  maximumPassengers: fareConfig.maximumPassengersPerBooking,
+});
+const bookingSeatService = new BookingSeatService({
+  bookingSeatRepository: repositories.bookingSeatRepository,
+});
+const allocationService = new AllocationService({
+  allocationRepository: repositories.activeSeatAllocationRepository,
+  bookingSeatRepository: repositories.bookingSeatRepository,
+  seatAvailabilityService,
+});
+bookingPassengerService.allocationService = allocationService;
 const bookingStatusService = new BookingStatusService({
   bookingRepository: repositories.bookingRepository,
   bookingStatusRepository: repositories.bookingStatusRepository,
@@ -44,6 +69,7 @@ const bookingStatusService = new BookingStatusService({
   refundRepository: repositories.refundRepository,
   auditService,
   notificationService,
+  transactionManager,
 });
 
 module.exports = {
@@ -52,17 +78,35 @@ module.exports = {
   bookingStatusService,
   auditService,
   notificationService,
+  transactionManager,
+  bookingPassengerService,
+  bookingSeatService,
+  allocationService,
   fareRuleService: new FareRuleService(repositories.fareRuleRepository),
   fareRuleClassService: new FareRuleClassService(repositories.fareRuleClassRepository),
   passengerFareRuleService: new PassengerFareRuleService(repositories.passengerFareRuleRepository),
   bookingService: new BookingService({
     bookingRepository: repositories.bookingRepository,
-    bookingPassengerRepository: repositories.bookingPassengerRepository,
-    bookingSeatRepository: repositories.bookingSeatRepository,
-    activeSeatAllocationRepository: repositories.activeSeatAllocationRepository,
+    bookingPassengerService,
+    bookingSeatService,
+    allocationService,
+    bookingStatusService,
+    journeyService: new JourneyService({
+      journeyRepository: repositories.journeyRepository,
+      journeyStationRepository: repositories.journeyStationRepository,
+      journeyCoachRepository: repositories.journeyCoachRepository,
+      journeySeatRepository: repositories.journeySeatRepository,
+      routeRepository: repositories.routeRepository,
+      trainRepository: repositories.trainRepository,
+    }),
     fareCalculationService,
     seatAvailabilityService,
     bookingStatusRepository: repositories.bookingStatusRepository,
+    paymentRepository: repositories.paymentRepository,
+    transactionManager,
+    notificationService,
+    auditService,
+    maximumPassengers: fareConfig.maximumPassengersPerBooking,
   }),
   stationService: new StationService(repositories.stationRepository),
   routeService: new RouteService({

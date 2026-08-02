@@ -18,5 +18,11 @@ class BookingPassengerRepository extends BaseRepository {
   deleteByBooking(bookingId, options = {}) {
     return this.model.destroy({ ...options, where: { bookingId } });
   }
+  findByBookingAndId(bookingId, id, options = {}) {
+    return this.findOne({ bookingId, id }, options);
+  }
+  findByAssignedSeat(bookingId, assignedSeatId, options = {}) {
+    return this.findOne({ bookingId, assignedSeatId }, options);
+  }
 }
 module.exports = BookingPassengerRepository;

@@ -1,71 +1,115 @@
 'use strict';
-
 process.env.DATABASE_URL ||= 'postgresql://postgres:postgres@127.0.0.1:5433/train_booking_test';
 process.env.NODE_ENV = 'test';
-
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const BookingService = require('../../../src/modules/bookings/booking.service');
 const BookingConflictError = require('../../../src/common/errors/BookingConflictError');
+const ValidationError = require('../../../src/common/errors/ValidationError');
 
-function fixture(conflicts = []) {
-  const stored = { bookings: [], passengers: [], seats: [], allocations: [] };
-  const fare = {
-    origin: { sequenceNumber: 0 },
-    destination: { sequenceNumber: 3 },
-    coach: {
-      journeySeatId: 'journey-seat-1',
+function fixture({ journeyStatus = 'SCHEDULED', available = true } = {}) {
+  const stored = {
+    bookings: [],
+    passengers: [],
+    bookingSeats: [],
+    allocations: [],
+    history: [],
+    locks: [],
+  };
+  let passengerId = 0;
+  let bookingSeatId = 0;
+  const seatResults = [
+    {
+      available,
+      journeySeatId: 'js-1',
       seatId: 'seat-1',
       seatNumber: '1A',
       coachNumber: 'R1',
-      coachClass: 'FIRST_CLASS',
+      coachClass: 'SECOND_CLASS',
     },
+    {
+      available,
+      journeySeatId: 'js-2',
+      seatId: 'seat-2',
+      seatNumber: '1B',
+      coachNumber: 'R1',
+      coachClass: 'SECOND_CLASS',
+    },
+  ];
+  const fare = {
     passengers: [
-      {
-        passengerType: 'ADULT',
-        fareBeforeDiscount: '1140.00',
-        discountAmount: '0.00',
-        fareAfterDiscount: '1140.00',
-      },
+      { fareBeforeDiscount: '760.00', discountAmount: '0.00', fareAfterDiscount: '760.00' },
+      { fareBeforeDiscount: '760.00', discountAmount: '380.00', fareAfterDiscount: '380.00' },
     ],
     totals: {
       passengerSubtotal: '1140.00',
-      discountTotal: '0.00',
+      discountTotal: '380.00',
       serviceFee: '28.50',
       taxAmount: '58.43',
       finalTotal: '1226.93',
       currency: 'LKR',
     },
   };
+  const bookingPassengerService = {
+    validatePassengerList(passengers) {
+      const ids = passengers.map((item) => item.journeySeatId);
+      if (new Set(ids).size !== ids.length)
+        throw new ValidationError('Duplicate journey seats are not allowed');
+    },
+    async bulkCreatePassengers({ bookingId, passengers }) {
+      const rows = passengers.map((passenger, index) => ({
+        id: `p-${++passengerId}`,
+        bookingId,
+        ...passenger,
+        assignedSeatId: `seat-${index + 1}`,
+        finalFare: fare.passengers[index].fareAfterDiscount,
+      }));
+      stored.passengers.push(...rows);
+      return rows;
+    },
+  };
   const service = new BookingService({
     bookingRepository: {
       async create(values) {
-        const item = { id: 'booking-1', ...values };
-        stored.bookings.push(item);
-        return item;
+        const row = { id: 'booking-1', ...values };
+        stored.bookings.push(row);
+        return row;
       },
     },
-    bookingPassengerRepository: {
-      async bulkCreate(values) {
-        const items = values.map((value, index) => ({ id: `passenger-${index + 1}`, ...value }));
-        stored.passengers.push(...items);
-        return items;
+    bookingPassengerService,
+    bookingSeatService: {
+      async bulkCreateBookingSeats({ seats }) {
+        const rows = seats.map((seat) => ({ id: `bs-${++bookingSeatId}`, ...seat }));
+        stored.bookingSeats.push(...rows);
+        return rows;
       },
     },
-    bookingSeatRepository: {
-      async create(values) {
-        const item = { id: 'booking-seat-1', ...values };
-        stored.seats.push(item);
-        return item;
+    allocationService: {
+      repository: {
+        async acquireSeatLocks({ seatIds }) {
+          stored.locks.push(...seatIds);
+        },
+      },
+      async createAllocations({ allocations }) {
+        stored.allocations.push(...allocations);
+        return allocations;
       },
     },
-    activeSeatAllocationRepository: {
-      async lockConflicts() {
-        return conflicts;
+    bookingStatusService: {},
+    journeyService: {
+      async getJourney() {
+        return { id: 'journey-1', status: journeyStatus };
       },
-      async create(values) {
-        stored.allocations.push(values);
-        return values;
+    },
+    seatAvailabilityService: {
+      async resolveSegmentSequences() {
+        return { segment: { originSequence: 0, destinationSequence: 3 } };
+      },
+      async checkMultipleSeatsAvailability() {
+        return { allAvailable: available, seats: seatResults };
+      },
+      async revalidateSeatsForBooking() {
+        return { allAvailable: available, seats: seatResults };
       },
     },
     fareCalculationService: {
@@ -73,53 +117,74 @@ function fixture(conflicts = []) {
         return fare;
       },
     },
-    seatAvailabilityService: {
-      async revalidateSeatsForBooking() {
-        return { allAvailable: true };
+    transactionManager: {
+      async executeSerializable(callback) {
+        return callback({ LOCK: { UPDATE: 'UPDATE' }, afterCommit() {} });
       },
     },
     bookingStatusRepository: {
-      async createStatusHistory() {},
-    },
-    transactionProvider: {
-      async transaction(callback) {
-        return callback({ id: 'tx', LOCK: { UPDATE: 'UPDATE' } });
+      async createStatusHistory(values) {
+        stored.history.push(values);
       },
     },
-    holdMinutes: 15,
-    clock: () => new Date('2026-08-01T00:00:00.000Z'),
+    holdMinutes: 10,
+    maximumPassengers: 6,
+    clock: () => new Date('2026-08-01T00:00:00Z'),
   });
   return { service, stored };
 }
 
-function request() {
+function request(overrides = {}) {
   return {
+    userId: 'user-1',
     journeyId: 'journey-1',
     originJourneyStationId: 'origin-1',
     destinationJourneyStationId: 'destination-1',
-    journeySeatId: 'journey-seat-1',
-    contactName: 'Test User',
-    contactEmail: 'test@example.com',
-    passengers: [{ fullName: 'Passenger One', passengerType: 'ADULT' }],
+    passengers: [
+      { fullName: 'Adult Passenger', passengerType: 'ADULT', journeySeatId: 'js-1' },
+      { fullName: 'Child Passenger', passengerType: 'CHILD', journeySeatId: 'js-2' },
+    ],
+    contact: { fullName: 'Contact', email: 'contact@example.com' },
     subtotal: '0.01',
     totalAmount: '0.01',
+    ...overrides,
   };
 }
 
-test('recalculates and stores authoritative fare snapshots inside the hold transaction', async () => {
+test('creates an atomic multi-passenger hold using server fare totals', async () => {
   const data = fixture();
   const result = await data.service.createBookingHold(request());
-  assert.equal(result.booking.subtotal, '1140.00');
-  assert.equal(result.booking.totalAmount, '1226.93');
-  assert.equal(result.booking.totalAmount === request().totalAmount, false);
-  assert.equal(data.stored.passengers[0].finalFare, '1140.00');
-  assert.equal(data.stored.seats[0].fareAmount, '1140.00');
-  assert.equal(data.stored.allocations[0].allocationType, 'HELD');
-  assert.equal(result.booking.holdExpiresAt.toISOString(), '2026-08-01T00:15:00.000Z');
+  assert.equal(result.status, 'HELD');
+  assert.equal(result.totals.totalAmount, '1226.93');
+  assert.equal(data.stored.bookings[0].totalAmount, '1226.93');
+  assert.equal(data.stored.passengers.length, 2);
+  assert.equal(data.stored.bookingSeats.length, 2);
+  assert.equal(data.stored.allocations.length, 2);
+  assert.deepEqual(data.stored.locks.sort(), ['seat-1', 'seat-2']);
+  assert.equal(data.stored.history[0].newStatus, 'HELD');
 });
 
-test('rejects a conflicting segment before persisting the booking', async () => {
-  const data = fixture([{ id: 'existing-allocation' }]);
-  await assert.rejects(() => data.service.createBookingHold(request()), BookingConflictError);
-  assert.equal(data.stored.bookings.length, 0);
+test('rejects cancelled journeys, unavailable seats and duplicate selections', async () => {
+  await assert.rejects(
+    () => fixture({ journeyStatus: 'CANCELLED' }).service.createBookingHold(request()),
+    BookingConflictError
+  );
+  await assert.rejects(
+    () => fixture({ available: false }).service.createBookingHold(request()),
+    BookingConflictError
+  );
+  const duplicate = request({
+    passengers: [
+      { fullName: 'One', passengerType: 'ADULT', journeySeatId: 'js-1' },
+      { fullName: 'Two', passengerType: 'ADULT', journeySeatId: 'js-1' },
+    ],
+  });
+  await assert.rejects(() => fixture().service.createBookingHold(duplicate), ValidationError);
+});
+
+test('rejects unsupported idempotency until durable database storage exists', async () => {
+  await assert.rejects(
+    () => fixture().service.createBookingHold(request({ idempotencyKey: 'client-key' })),
+    ValidationError
+  );
 });

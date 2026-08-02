@@ -18,6 +18,9 @@ function createAdminRouter(services) {
   const controller = new BookingController(services);
   router.use(requireAdmin);
   router.patch('/bookings/:bookingId/status', controller.updateStatus);
+  router.get('/journeys/:journeyId/bookings', controller.getJourneyBookings);
+  router.post('/bookings/:bookingId/complete', controller.completeBooking);
+  router.post('/bookings/:bookingId/cancel', controller.cancelBooking);
   router.use(
     '/journeys/:journeyId/seats/:journeySeatId/timeline',
     createTimelineRouter(services.seatAvailabilityService)

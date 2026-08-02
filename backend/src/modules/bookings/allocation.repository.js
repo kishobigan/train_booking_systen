@@ -2,6 +2,7 @@
 const { Op } = require('sequelize');
 const BaseRepository = require('../../common/repositories/BaseRepository');
 const { ActiveSeatAllocation } = require('../../models');
+const createAdvisoryLockKey = require('../../common/utils/advisory-lock-key');
 class ActiveSeatAllocationRepository extends BaseRepository {
   constructor() {
     super(ActiveSeatAllocation);
@@ -65,6 +66,23 @@ class ActiveSeatAllocationRepository extends BaseRepository {
         expiresAt: { [Op.lte]: referenceDate },
       },
     });
+  }
+  async acquireSeatLock({ journeyId, seatId, transaction }) {
+    const lockKey = createAdvisoryLockKey(journeyId, seatId);
+    await this.model.sequelize.query('SELECT pg_advisory_xact_lock(CAST(:lockKey AS BIGINT))', {
+      replacements: { lockKey },
+      transaction,
+    });
+    return lockKey;
+  }
+  async acquireSeatLocks({ journeyId, seatIds, transaction }) {
+    const locks = seatIds
+      .map((seatId) => ({ seatId, key: BigInt(createAdvisoryLockKey(journeyId, seatId)) }))
+      .sort((left, right) => (left.key < right.key ? -1 : left.key > right.key ? 1 : 0));
+    for (const lock of locks) {
+      await this.acquireSeatLock({ journeyId, seatId: lock.seatId, transaction });
+    }
+    return locks.map((lock) => lock.key.toString());
   }
 }
 module.exports = ActiveSeatAllocationRepository;

@@ -111,6 +111,9 @@ class BookingStatusService {
       return updated;
     };
     if (input.transaction) return operation(input.transaction);
+    if (typeof this.transactionManager.execute === 'function') {
+      return this.transactionManager.execute(operation);
+    }
     return this.transactionManager.transaction(operation);
   }
 
@@ -246,7 +249,7 @@ class BookingStatusService {
       return;
     if (
       actor.role === 'PASSENGER' &&
-      targetStatus === BOOKING_STATUS.CANCELLED &&
+      [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.CONFIRMED].includes(targetStatus) &&
       booking.userId === actor.userId
     )
       return;

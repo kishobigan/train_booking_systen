@@ -4,16 +4,18 @@ const repositories = require('../container/repositories');
 const logger = require('../config/logger');
 
 async function expireBookingHolds({
-  bookingStatusService = services.bookingStatusService,
+  bookingService = services.bookingService,
   bookingRepository = repositories.bookingRepository,
+  transactionManager = services.transactionManager,
   batchSize = 100,
-  referenceDate = new Date(),
 } = {}) {
-  const bookings = await bookingRepository.findExpiredHolds(referenceDate, { limit: batchSize });
+  const bookings = await transactionManager.execute((transaction) =>
+    bookingRepository.findForExpiryBatch(batchSize, transaction)
+  );
   const results = [];
   for (const booking of bookings) {
     try {
-      await bookingStatusService.expireBooking({
+      await bookingService.expireBooking({
         bookingId: booking.id,
         actor: { type: 'SYSTEM', source: 'expire-booking-holds-job' },
         reason: 'Booking hold expired before payment.',

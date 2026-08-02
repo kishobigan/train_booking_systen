@@ -11,8 +11,15 @@ function requirePassenger(req, res, next) {
 function createPassengerRouter(services) {
   const router = express.Router();
   const controller = new BookingController(services);
-  router.get('/bookings/:bookingId/status-history', requirePassenger, controller.getStatusHistory);
-  router.post('/bookings/:bookingId/cancel', requirePassenger, controller.cancelBooking);
+  router.use(requirePassenger);
+  router.post('/bookings/hold', controller.createHold);
+  router.get('/bookings/reference/:reference', controller.getByReference);
+  router.get('/bookings', controller.getMyBookings);
+  router.post('/bookings/:bookingId/confirm', controller.confirm);
+  router.get('/bookings/:bookingId/ticket', controller.getTicket);
+  router.get('/bookings/:bookingId', controller.getById);
+  router.get('/bookings/:bookingId/status-history', controller.getStatusHistory);
+  router.post('/bookings/:bookingId/cancel', controller.cancelBooking);
   return router;
 }
 module.exports = createPassengerRouter;

@@ -1,7 +1,7 @@
 'use strict';
 const { randomBytes } = require('node:crypto');
 function createBookingReference(date = new Date()) {
-  const day = date.toISOString().slice(0, 10).replaceAll('-', '');
-  return `TRN-${day}-${randomBytes(4).toString('hex').toUpperCase()}`;
+  void date;
+  return `TRN-${randomBytes(5).toString('base64url').slice(0, 6).toUpperCase()}`;
 }
 module.exports = createBookingReference;

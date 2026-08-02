@@ -27,6 +27,46 @@ class BookingRepository extends BaseRepository {
   findByJourney(journeyId, options = {}) {
     return this.findAll({ journeyId }, options);
   }
+  findByIdForUpdate(bookingId, transaction) {
+    return this.findById(bookingId, { transaction, lock: transaction.LOCK.UPDATE });
+  }
+  findByReferenceForUpdate(bookingReference, transaction) {
+    return this.findOne({ bookingReference }, { transaction, lock: transaction.LOCK.UPDATE });
+  }
+  findByUserId(userId, options = {}) {
+    return this.findByUser(userId, options);
+  }
+  findByJourneyId(journeyId, options = {}) {
+    return this.findByJourney(journeyId, options);
+  }
+  update(booking, values, options = {}) {
+    return booking.update(values, options);
+  }
+  updateStatus(booking, status, options = {}) {
+    return booking.update({ status }, options);
+  }
+  findExpiredHeldBookings(referenceDate = new Date(), options = {}) {
+    return this.findExpiredHolds(referenceDate, options);
+  }
+  countByUser(userId, options = {}) {
+    return this.count({ userId }, options);
+  }
+  existsByIdempotencyKey() {
+    return Promise.resolve(false);
+  }
+  findByIdempotencyKey() {
+    return Promise.resolve(null);
+  }
+  findForExpiryBatch(limit, transaction) {
+    return this.model.findAll({
+      where: { status: 'HELD', holdExpiresAt: { [Op.lte]: this.model.sequelize.fn('NOW') } },
+      attributes: ['id', 'holdExpiresAt'],
+      limit,
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+      skipLocked: true,
+    });
+  }
   findExpiredHolds(referenceDate = new Date(), options = {}) {
     return this.findAll({ status: 'HELD', holdExpiresAt: { [Op.lte]: referenceDate } }, options);
   }
