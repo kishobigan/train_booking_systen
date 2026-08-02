@@ -1,0 +1,1 @@
+import { Card } from '@/components/ui/Card'; import { LoginForm } from '@/components/auth/LoginForm'; export default function LoginPage(){return <div className="shell"><Card className="auth-card"><div className="page-heading"><h1>Welcome back</h1><p className="muted">Sign in to manage journeys and bookings.</p></div><LoginForm/></Card></div>}

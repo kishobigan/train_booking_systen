@@ -1,0 +1,1 @@
+import { Card } from '@/components/ui/Card'; export default function ChangePasswordPage(){return <div className="shell"><Card className="auth-card"><div className="page-heading"><h1>Change password</h1><p className="muted">For security, choose a new password before continuing.</p></div><p>Password changes are submitted through the authenticated account workflow.</p></Card></div>}

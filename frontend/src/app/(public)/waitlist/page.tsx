@@ -1,0 +1,1 @@
+import { EmptyState } from '@/components/ui/StatusState'; export default function WaitlistPage(){return <div className="shell"><div className="page-heading"><h1>Waitlist</h1></div><EmptyState title="No active waitlist entries" message="Seat offers and expiry times will appear here."/></div>}

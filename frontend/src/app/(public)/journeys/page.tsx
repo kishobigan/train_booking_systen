@@ -1,0 +1,1 @@
+import { JourneySearch } from '@/components/JourneySearch'; export default function JourneysPage(){return <div className="shell"><div className="page-heading"><h1>Find a journey</h1><p className="muted">Search scheduled rail services by route and travel date.</p></div><JourneySearch/></div>}

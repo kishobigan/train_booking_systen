@@ -1,0 +1,3 @@
+'use client';
+import { PropsWithChildren, useEffect } from 'react'; import { useRouter } from 'next/navigation'; import { Role } from '@/types/domain'; import { useAuthStore } from '@/store/auth.store'; import { LoadingState } from '@/components/ui/StatusState';
+export function RoleGuard({ roles, children }: PropsWithChildren<{ roles?: Role[] }>) { const router = useRouter(); const { user, initialized } = useAuthStore(); const allowed = user && (!roles || roles.includes(user.role)); useEffect(() => { if (initialized && !allowed) router.replace(user ? '/' : '/login'); }, [allowed, initialized, router, user]); return allowed ? children : <LoadingState label="Checking access…" />; }

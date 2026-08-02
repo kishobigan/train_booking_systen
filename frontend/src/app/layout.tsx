@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AppProviders } from '@/providers/AppProviders';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { AppFooter } from '@/components/layout/AppFooter';
 
 export const metadata: Metadata = {
-  title: 'Train Booking System',
-  description: 'Book train tickets easily',
+  title: { default: 'Railway Booking', template: '%s | Railway Booking' },
+  description: 'Plan and book Sri Lankan railway journeys.',
 };
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><AppProviders><AppHeader /><main className="app-main">{children}</main><AppFooter /></AppProviders></body>
     </html>
   );
 }

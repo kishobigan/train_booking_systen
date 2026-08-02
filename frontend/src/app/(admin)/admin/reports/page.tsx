@@ -1,0 +1,1 @@
+import { RoleGuard } from '@/components/auth/RoleGuard'; export default function Reports(){return <RoleGuard roles={['ADMIN','SUPER_ADMIN']}><div className="shell"><div className="page-heading"><h1>Reports</h1><p className="muted">Operational and revenue summaries.</p></div></div></RoleGuard>}

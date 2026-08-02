@@ -1,0 +1,1 @@
+'use client'; import { ErrorState } from '@/components/ui/StatusState'; export default function ErrorPage({error,reset}:{error:Error;reset:()=>void}){return <div className="shell"><ErrorState message={error.message || 'An unexpected error occurred.'} retry={reset}/></div>}

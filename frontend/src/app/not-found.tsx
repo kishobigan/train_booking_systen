@@ -1,0 +1,1 @@
+import Link from 'next/link'; import { EmptyState } from '@/components/ui/StatusState'; export default function NotFound(){return <div className="shell"><EmptyState title="Page not found" message="The page may have moved or no longer exists."/><div style={{textAlign:'center'}}><Link className="button" href="/">Return home</Link></div></div>}

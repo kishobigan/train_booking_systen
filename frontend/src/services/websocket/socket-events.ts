@@ -1,0 +1,2 @@
+export const SEAT_MAP_EVENTS = ['seat:held','seats:held','seat:confirmed','seats:confirmed','seat:released','seats:released','seat:expired','seat:blocked','seat:unblocked','seat:maintenance','seat:waitlist-offered','coach:enabled','coach:disabled','journey:booking-closed','journey:cancelled'] as const;
+export type SeatMapSubscription = { journeyId: string; originJourneyStationId: string; destinationJourneyStationId: string };
