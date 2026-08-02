@@ -1,0 +1,22 @@
+'use strict';
+const BaseRepository = require('../../common/repositories/BaseRepository');
+const { BookingPassenger, Seat } = require('../../models');
+class BookingPassengerRepository extends BaseRepository {
+  constructor() {
+    super(BookingPassenger);
+  }
+  findByBooking(bookingId, options = {}) {
+    return this.findAll(
+      { bookingId },
+      {
+        ...options,
+        include: options.include || [{ model: Seat, as: 'assignedSeat' }],
+        order: options.order || [['created_at', 'ASC']],
+      }
+    );
+  }
+  deleteByBooking(bookingId, options = {}) {
+    return this.model.destroy({ ...options, where: { bookingId } });
+  }
+}
+module.exports = BookingPassengerRepository;
