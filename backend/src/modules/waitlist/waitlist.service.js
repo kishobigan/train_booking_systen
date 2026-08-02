@@ -80,8 +80,9 @@ class WaitlistService {
       if (entry.status === WAITLIST_STATUS.CANCELLED) return this.#entryResult(entry);
       if (![WAITLIST_STATUS.WAITING, WAITLIST_STATUS.OFFERED].includes(entry.status))
         throw new WaitlistError('This waitlist entry can no longer be cancelled');
-      if (entry.status === WAITLIST_STATUS.OFFERED)
-        await this.waitlistOfferService.releaseOffer(entry, transaction);
+      const releasedSeatId = entry.offeredSeatId;
+      const releasedOffer = entry.status === WAITLIST_STATUS.OFFERED;
+      if (releasedOffer) await this.waitlistOfferService.releaseOffer(entry, transaction);
       await entry.update(
         {
           status: WAITLIST_STATUS.CANCELLED,
@@ -93,6 +94,21 @@ class WaitlistService {
       await this.#audit(entry, 'WAITLIST_CANCELLED', input.userId, transaction, input.reason);
       transaction.afterCommit?.(() =>
         this.notificationService?.waitlistStatusChanged({ entry, event: 'CANCELLED' })
+      );
+      transaction.afterCommit?.(() =>
+        releasedOffer
+          ? this.seatMapPublisher
+              ?.publishSeatReleased({
+                journeyId: entry.journeyId,
+                releasedSegment: {
+                  originSequence: entry.originSequence,
+                  destinationSequence: entry.destinationSequence,
+                },
+                seats: [{ seatId: releasedSeatId, status: 'AVAILABLE' }],
+                reason: 'WAITLIST_CANCELLED',
+              })
+              .catch(() => undefined)
+          : undefined
       );
       return this.#entryResult(entry);
     });
@@ -240,6 +256,7 @@ class WaitlistService {
       if (entry.status !== WAITLIST_STATUS.OFFERED) return this.#entryResult(entry);
       if (entry.offerExpiresAt > this.clock() && input.actor?.role !== 'SYSTEM')
         throw new WaitlistError('The offer has not expired');
+      const releasedSeatId = entry.offeredSeatId;
       await this.waitlistOfferService.releaseOffer(entry, transaction);
       if (this.config.requeueExpiredOffers)
         await this.requeueEntry({ waitlistEntry: entry, transaction });
@@ -257,6 +274,19 @@ class WaitlistService {
       );
       transaction.afterCommit?.(() =>
         this.notificationService?.waitlistStatusChanged({ entry, event: entry.status })
+      );
+      transaction.afterCommit?.(() =>
+        this.seatMapPublisher
+          ?.publishSeatExpired({
+            journeyId: entry.journeyId,
+            releasedSegment: {
+              originSequence: entry.originSequence,
+              destinationSequence: entry.destinationSequence,
+            },
+            seats: [{ seatId: releasedSeatId, status: 'AVAILABLE' }],
+            reason: 'WAITLIST_OFFER_EXPIRED',
+          })
+          .catch(() => undefined)
       );
       return this.#entryResult(entry);
     });

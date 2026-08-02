@@ -6,12 +6,14 @@ const {
 } = require('../modules/availability/availability.routes');
 const createStationRouter = require('../modules/stations/station.routes');
 const { createRouteReadRouter } = require('../modules/routes/route.routes');
+const createSeatMapRouter = require('../modules/seatmap/seatmap.routes');
 const createJourneyRouter = require('../modules/journeys/journey.routes');
 function createPublicRouter(services) {
   const router = express.Router();
   router.use('/stations', createStationRouter(services.stationService));
   router.use('/routes', createRouteReadRouter(services));
   router.use('/journeys', createJourneyRouter(services.journeyService));
+  router.use('/journeys/:journeyId/seat-map', createSeatMapRouter(services.seatMapService));
   router.use(
     '/journeys/:journeyId/availability',
     createAvailabilityRouter(services.seatAvailabilityService)

@@ -245,7 +245,14 @@ class JourneyService {
         throw new ConflictError('A completed journey cannot be cancelled');
       }
       if (journey.status === JOURNEY_STATUS.CANCELLED) return journey;
-      return journey.update({ status: JOURNEY_STATUS.CANCELLED }, transactionOptions);
+      const updated = await journey.update(
+        { status: JOURNEY_STATUS.CANCELLED },
+        transactionOptions
+      );
+      transactionOptions.transaction?.afterCommit?.(() =>
+        this.seatMapPublisher?.publishJourneyCancelled({ journeyId: id }).catch(() => undefined)
+      );
+      return updated;
     });
   }
 
@@ -290,6 +297,16 @@ class JourneyService {
             reason: options.reason,
           })
           .catch((error) => logger.error({ code: error.code }, 'Delay notification queue failed'))
+      );
+      transactionOptions.transaction?.afterCommit?.(() =>
+        this.seatMapPublisher
+          ?.publishJourneyDelayed({
+            journeyId: id,
+            scheduledDepartureAt: updated.scheduledDepartureAt,
+            scheduledArrivalAt: updated.scheduledArrivalAt,
+            delayMinutes,
+          })
+          .catch(() => undefined)
       );
       return updated;
     });

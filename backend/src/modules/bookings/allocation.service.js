@@ -18,6 +18,7 @@ class AllocationService {
       return await this.repository.create(
         {
           bookingSeatId: input.bookingSeatId,
+          journeySeatId: input.journeySeatId,
           journeyId: input.journeyId,
           seatId: input.seatId,
           occupiedSegment: [input.originSequence, input.destinationSequence],

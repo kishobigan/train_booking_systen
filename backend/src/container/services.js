@@ -47,6 +47,9 @@ const notificationConfig = require('../config/notification');
 const sequelize = require('../database/sequelize');
 const passwordService = require('../lib/password');
 const jwtService = require('../lib/jwt');
+const SeatMapService = require('../modules/seatmap/seatmap.service');
+const JourneySeatService = require('../modules/journeys/journey-seat.service');
+const JourneyCoachService = require('../modules/journeys/journey-coach.service');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -319,6 +322,22 @@ Object.assign(services, {
   reportService: new ReportService({
     reportRepository: repositories.reportRepository,
     accessControlService,
+  }),
+  seatMapService: new SeatMapService({
+    journeyRepository: repositories.journeyRepository,
+    journeyStationRepository: repositories.journeyStationRepository,
+    journeyCoachRepository: repositories.journeyCoachRepository,
+    journeySeatRepository: repositories.journeySeatRepository,
+    seatMapRepository: repositories.seatMapRepository,
+    seatAvailabilityService,
+  }),
+  journeySeatService: new JourneySeatService({
+    journeySeatRepository: repositories.journeySeatRepository,
+    transactionProvider: sequelize,
+  }),
+  journeyCoachService: new JourneyCoachService({
+    journeyCoachRepository: repositories.journeyCoachRepository,
+    transactionProvider: sequelize,
   }),
 });
 module.exports = services;

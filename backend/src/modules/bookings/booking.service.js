@@ -158,6 +158,7 @@ class BookingService {
       await this.allocationService.createAllocations({
         allocations: bookingSeats.map((bookingSeat) => ({
           bookingSeatId: bookingSeat.id,
+          journeySeatId: bookingSeat.journeySeatId,
           journeyId: booking.journeyId,
           seatId: bookingSeat.seatId,
           ...resolved.segment,
@@ -191,6 +192,23 @@ class BookingService {
       transaction.afterCommit?.(() =>
         this.notificationService?.bookingStatusChanged({ booking, previousStatus: null })
       );
+      transaction.afterCommit?.(() =>
+        this.seatMapPublisher
+          ?.publishSeatHeld({
+            journeyId: booking.journeyId,
+            occupiedSegment: resolved.segment,
+            seats: bookingSeats.map((seat) => ({
+              journeySeatId: seat.journeySeatId,
+              seatId: seat.seatId,
+              seatNumber: seat.seatNumberSnapshot,
+              coachNumber: seat.coachNumberSnapshot,
+              coachClass: seat.coachClassSnapshot,
+              status: 'HELD',
+              holdExpiresAt,
+            })),
+          })
+          .catch(() => undefined)
+      );
       return this.#holdResult(
         booking,
         resolved.segment,
@@ -222,7 +240,10 @@ class BookingService {
         payment.currency !== booking.currency
       )
         throw new ValidationError('Payment amount or currency does not match booking total');
-      await this.allocationService.confirmBookingAllocations({ bookingId, transaction });
+      await this.allocationService.confirmBookingAllocations({
+        bookingId,
+        transaction,
+      });
       const updated = await this.bookingStatusService.confirmBooking({
         bookingId,
         actor: actor || { type: 'USER', userId, role: 'PASSENGER' },

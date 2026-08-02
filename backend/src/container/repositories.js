@@ -34,6 +34,7 @@ const repositoryClasses = {
   idempotencyRepository: require('../modules/payments/idempotency.repository'),
   reconciliationRepository: require('../modules/payments/reconciliation.repository'),
   reportRepository: require('../modules/reports/report.repository'),
+  seatMapRepository: require('../modules/seatmap/seatmap.repository'),
 };
 
 module.exports = Object.fromEntries(

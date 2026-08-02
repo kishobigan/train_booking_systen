@@ -95,6 +95,26 @@ class WaitlistOfferService {
       transaction.afterCommit?.(() =>
         this.notificationService?.waitlistStatusChanged({ entry, event: 'OFFERED' })
       );
+      transaction.afterCommit?.(() =>
+        this.seatMapPublisher
+          ?.publishWaitlistOffer({
+            journeyId: entry.journeyId,
+            occupiedSegment: {
+              originSequence: entry.originSequence,
+              destinationSequence: entry.destinationSequence,
+            },
+            seats: revalidated.seats.map((seat) => ({
+              journeySeatId: seat.journeySeatId,
+              seatId: seat.seatId,
+              seatNumber: seat.seatNumber,
+              coachNumber: seat.coachNumber,
+              coachClass: seat.coachClass,
+              status: 'WAITLIST_OFFERED',
+              holdExpiresAt: expiresAt,
+            })),
+          })
+          .catch(() => undefined)
+      );
       return {
         waitlistEntryId: entry.id,
         status: entry.status,

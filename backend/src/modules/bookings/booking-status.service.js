@@ -52,6 +52,9 @@ class BookingStatusService {
         transaction
       );
       if (!booking) throw new NotFoundError('Booking not found');
+      const realtimeSeats = this.seatMapPublisher
+        ? await this.bookingSeatRepository.findByBooking(booking.id, { transaction })
+        : [];
       await this.validateTransition({
         currentStatus: booking.status,
         targetStatus: input.targetStatus,
@@ -110,6 +113,35 @@ class BookingStatusService {
           { transaction }
         );
       transaction.afterCommit?.(() => this.#notify(updated, previousStatus));
+      transaction.afterCommit?.(() => {
+        if (!this.seatMapPublisher || !realtimeSeats.length) return undefined;
+        const payload = {
+          journeyId: booking.journeyId,
+          occupiedSegment: {
+            originSequence: booking.originSequence,
+            destinationSequence: booking.destinationSequence,
+          },
+          releasedSegment: {
+            originSequence: booking.originSequence,
+            destinationSequence: booking.destinationSequence,
+          },
+          seats: realtimeSeats.map((seat) => ({
+            journeySeatId: seat.journeySeatId,
+            seatId: seat.seatId,
+            seatNumber: seat.seatNumberSnapshot,
+            coachNumber: seat.coachNumberSnapshot,
+            coachClass: seat.coachClassSnapshot,
+            status: input.targetStatus,
+          })),
+        };
+        if (input.targetStatus === BOOKING_STATUS.CONFIRMED)
+          return this.seatMapPublisher.publishSeatConfirmed(payload).catch(() => undefined);
+        if (input.targetStatus === BOOKING_STATUS.EXPIRED)
+          return this.seatMapPublisher.publishSeatExpired(payload).catch(() => undefined);
+        if (input.targetStatus === BOOKING_STATUS.CANCELLED)
+          return this.seatMapPublisher.publishSeatReleased(payload).catch(() => undefined);
+        return undefined;
+      });
       return updated;
     };
     if (input.transaction) return operation(input.transaction);

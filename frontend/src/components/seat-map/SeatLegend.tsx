@@ -1,0 +1,1 @@
+export default function SeatLegend() { return <ul aria-label="Seat status legend"><li>✓ Available</li><li>● Selected</li><li>⌛ Held / waitlist offer</li><li>🔒 Confirmed or unavailable</li><li>⚠ Blocked / maintenance</li><li>♿ Accessible</li></ul>; }

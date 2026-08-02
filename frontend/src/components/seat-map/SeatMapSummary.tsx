@@ -1,0 +1,1 @@
+export default function SeatMapSummary({ summary }: any) { return <p aria-live="polite"><strong>{summary.availableSeats}</strong> available · {summary.unavailableSeats} unavailable · {summary.totalReservedSeats} total</p>; }
