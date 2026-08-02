@@ -32,3 +32,5 @@ Thumbs.db
 
 # Docker
 .docker/
+
+/scripts/ignore_scripts
