@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const sequelize = require('../lib/sequelize');
+const sequelize = require('../database/sequelize');
 
 const router = express.Router();
 

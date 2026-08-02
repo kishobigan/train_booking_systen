@@ -1,0 +1,10 @@
+'use strict';
+module.exports = Object.freeze({
+  PENDING: 'PENDING',
+  HELD: 'HELD',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+  COMPLETED: 'COMPLETED',
+  REFUNDED: 'REFUNDED',
+});

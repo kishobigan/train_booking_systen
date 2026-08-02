@@ -1,0 +1,10 @@
+'use strict';
+module.exports = Object.freeze({
+  DRAFT: 'DRAFT',
+  SCHEDULED: 'SCHEDULED',
+  BOARDING: 'BOARDING',
+  DEPARTED: 'DEPARTED',
+  COMPLETED: 'COMPLETED',
+  DELAYED: 'DELAYED',
+  CANCELLED: 'CANCELLED',
+});

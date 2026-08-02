@@ -1,0 +1,8 @@
+'use strict';
+module.exports = Object.freeze({
+  FIRST_CLASS: 'FIRST_CLASS',
+  SECOND_CLASS: 'SECOND_CLASS',
+  THIRD_CLASS: 'THIRD_CLASS',
+  OBSERVATION_CLASS: 'OBSERVATION_CLASS',
+  SLEEPER: 'SLEEPER',
+});

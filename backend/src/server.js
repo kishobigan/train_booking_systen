@@ -2,7 +2,7 @@
 
 const createApp = require('./app');
 const logger = require('./config/logger');
-const sequelize = require('./lib/sequelize');
+const sequelize = require('./database/sequelize');
 
 function startServer() {
   const port = Number(process.env.PORT) || 4050;
