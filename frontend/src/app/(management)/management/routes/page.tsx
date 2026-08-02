@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {RouteManagementView} from '@/components/routes/RouteManagementView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.ROUTE_VIEW}><RouteManagementView/></PermissionPageGuard>}

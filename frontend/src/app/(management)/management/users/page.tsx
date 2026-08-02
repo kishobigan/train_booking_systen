@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {UserManagementView} from '@/components/users/UserManagementView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.USER_VIEW}><UserManagementView/></PermissionPageGuard>}

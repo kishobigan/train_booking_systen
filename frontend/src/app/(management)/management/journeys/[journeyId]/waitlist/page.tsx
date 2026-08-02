@@ -1,0 +1,1 @@
+import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default function Page(){return <ManagementPlaceholder title="Journey waitlist" description="Scoped waitlist entries and current seat offers."/>}

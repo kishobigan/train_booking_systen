@@ -1,0 +1,1 @@
+import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default async function Page({params}:{params:Promise<{routeId:string}>}){return <ManagementPlaceholder title="Route details" description={`Route ${(await params).routeId} and its ordered stations.`}/>}

@@ -1,0 +1,2 @@
+'use client'; import {ReactNode} from 'react'; import {Permission} from '@/constants/permissions'; import {usePermissions} from '@/hooks/usePermissions';
+export function PermissionGuard({permission,anyOf,allOf,children,fallback=null}:{permission?:Permission;anyOf?:Permission[];allOf?:Permission[];children:ReactNode;fallback?:ReactNode}){const p=usePermissions();const allowed=permission?p.hasPermission(permission):anyOf?.length?p.hasAnyPermission(...anyOf):allOf?.length?p.hasAllPermissions(...allOf):true;return allowed?children:fallback}

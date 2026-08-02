@@ -1,0 +1,1 @@
+import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default function Page(){return <ManagementPlaceholder title="Live administrative seat map" description="Choose an origin and destination segment to load the shared REST snapshot and authorized WebSocket updates."/>}

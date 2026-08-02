@@ -1,0 +1,1 @@
+export const ROLES={SUPER_ADMIN:'SUPER_ADMIN',ADMIN:'ADMIN',STAFF:'STAFF',PASSENGER:'PASSENGER'} as const; export type InternalRole=typeof ROLES.SUPER_ADMIN|typeof ROLES.ADMIN|typeof ROLES.STAFF;

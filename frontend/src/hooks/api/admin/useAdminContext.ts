@@ -1,0 +1,1 @@
+'use client'; import {useAuthStore} from '@/store/auth.store'; import {ROLES} from '@/constants/roles'; export function useAdminContext(){const user=useAuthStore(s=>s.user);return{user,mode:user?.role===ROLES.SUPER_ADMIN?'super-admin' as const:'admin' as const,isSuperAdmin:user?.role===ROLES.SUPER_ADMIN}}

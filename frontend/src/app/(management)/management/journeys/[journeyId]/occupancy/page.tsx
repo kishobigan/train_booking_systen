@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {OccupancyReportView} from '@/components/reports/ReportView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.REPORT_OCCUPANCY_VIEW}><OccupancyReportView/></PermissionPageGuard>}

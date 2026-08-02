@@ -1,0 +1,1 @@
+import Link from 'next/link'; import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default function Page(){return <><ManagementPlaceholder title="Payments" description="Scoped payment activity and verification state."/><Link className="button" href="/management/payments/bank-slips">Review bank slips</Link></>}

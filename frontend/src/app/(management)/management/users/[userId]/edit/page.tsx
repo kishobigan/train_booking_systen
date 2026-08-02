@@ -1,0 +1,1 @@
+import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default function Page(){return <ManagementPlaceholder title="Edit user" description="Update safe profile fields and manage assignments through confirmed backend operations."/>}

@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {JourneyManagementView} from '@/components/admin-journeys/JourneyManagementView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.JOURNEY_VIEW}><JourneyManagementView/></PermissionPageGuard>}

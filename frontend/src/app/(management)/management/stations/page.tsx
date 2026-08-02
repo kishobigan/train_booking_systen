@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {StationManagementView} from '@/components/stations/StationManagementView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.STATION_VIEW}><StationManagementView/></PermissionPageGuard>}

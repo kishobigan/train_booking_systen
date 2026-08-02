@@ -1,0 +1,1 @@
+import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default function Page(){return <ManagementPlaceholder title="Settings" description="System configuration is restricted to explicitly supported backend settings."/>}

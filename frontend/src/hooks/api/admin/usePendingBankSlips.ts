@@ -1,0 +1,1 @@
+'use client'; import {useQuery} from '@tanstack/react-query'; import {adminPaymentService} from '@/services/admin/payment-admin.service'; import {useAdminContext} from './useAdminContext'; export function usePendingBankSlips(){const{mode}=useAdminContext();return useQuery({queryKey:['payments','bank-slips','pending',mode],queryFn:()=>adminPaymentService.pendingSlips(mode)})}

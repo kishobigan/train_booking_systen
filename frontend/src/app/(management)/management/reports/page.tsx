@@ -1,0 +1,1 @@
+import Link from 'next/link'; export default function Page(){return <div className="stack"><h1>Reports</h1><div className="management-grid"><Link className="card" href="/management/reports/revenue">Revenue report</Link><Link className="card" href="/management/reports/occupancy">Occupancy report</Link></div></div>}

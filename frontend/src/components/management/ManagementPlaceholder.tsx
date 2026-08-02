@@ -1,0 +1,1 @@
+import {Card} from '@/components/ui/Card'; export function ManagementPlaceholder({title,description}:{title:string;description:string}){return <div className="stack"><h1>{title}</h1><Card><p className="muted">{description}</p></Card></div>}

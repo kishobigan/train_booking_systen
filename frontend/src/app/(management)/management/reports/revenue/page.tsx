@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {RevenueReportView} from '@/components/reports/ReportView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.REPORT_REVENUE_VIEW}><RevenueReportView/></PermissionPageGuard>}

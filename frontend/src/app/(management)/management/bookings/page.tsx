@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {BookingManagementView} from '@/components/admin-bookings/BookingManagementView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.BOOKING_VIEW}><BookingManagementView/></PermissionPageGuard>}

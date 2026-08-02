@@ -1,0 +1,1 @@
+import {PermissionPageGuard} from '@/components/auth/PermissionPageGuard'; import {PendingBankSlipsView} from '@/components/management/PendingBankSlipsView'; import {PERMISSIONS as P} from '@/constants/permissions'; export default function Page(){return <PermissionPageGuard permission={P.PAYMENT_VERIFY_BANK_SLIP}><PendingBankSlipsView/></PermissionPageGuard>}
