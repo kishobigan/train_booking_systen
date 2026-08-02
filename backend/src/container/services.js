@@ -5,6 +5,7 @@ const StationService = require('../modules/stations/station.service');
 const RouteService = require('../modules/routes/route.service');
 const TrainService = require('../modules/trains/train.service');
 const CoachService = require('../modules/coaches/coach.service');
+const SeatService = require('../modules/seats/seat.service');
 
 module.exports = {
   stationService: new StationService(repositories.stationRepository),
@@ -18,5 +19,9 @@ module.exports = {
     coachRepository: repositories.coachRepository,
     seatRepository: repositories.seatRepository,
     trainRepository: repositories.trainRepository,
+  }),
+  seatService: new SeatService({
+    seatRepository: repositories.seatRepository,
+    coachRepository: repositories.coachRepository,
   }),
 };

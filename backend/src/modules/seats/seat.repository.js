@@ -1,4 +1,5 @@
 'use strict';
+const { Op } = require('sequelize');
 const BaseRepository = require('../../common/repositories/BaseRepository');
 const { Seat } = require('../../models');
 class SeatRepository extends BaseRepository {
@@ -19,6 +20,9 @@ class SeatRepository extends BaseRepository {
   }
   findByCoachAndNumber(coachId, seatNumber, options = {}) {
     return this.findOne({ coachId, seatNumber }, options);
+  }
+  findByCoachAndNumbers(coachId, seatNumbers, options = {}) {
+    return this.findAll({ coachId, seatNumber: { [Op.in]: seatNumbers } }, options);
   }
   deleteByCoach(coachId, options = {}) {
     return this.model.destroy({ ...options, where: { coachId } });
