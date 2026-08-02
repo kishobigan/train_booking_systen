@@ -20,5 +20,8 @@ class SeatRepository extends BaseRepository {
   findByCoachAndNumber(coachId, seatNumber, options = {}) {
     return this.findOne({ coachId, seatNumber }, options);
   }
+  deleteByCoach(coachId, options = {}) {
+    return this.model.destroy({ ...options, where: { coachId } });
+  }
 }
 module.exports = SeatRepository;

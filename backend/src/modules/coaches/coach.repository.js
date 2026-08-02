@@ -14,6 +14,9 @@ class CoachRepository extends BaseRepository {
   findByTrainAndNumber(trainId, coachNumber, options = {}) {
     return this.findOne({ trainId, coachNumber }, options);
   }
+  findByTrainAndPosition(trainId, positionNumber, options = {}) {
+    return this.findOne({ trainId, positionNumber }, options);
+  }
   findWithSeats(id, options = {}) {
     const { activeSeatsOnly, ...queryOptions } = options;
     return this.model.findByPk(id, {
