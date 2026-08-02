@@ -39,6 +39,20 @@ class PaymentController {
       )
     )
   );
+  verify = asyncHandler(async (req, res) => {
+    const payment = await this.paymentService.getPaymentById(req.params.paymentId, req.user);
+    if (payment.method !== 'CARD') {
+      return res.json(apiResponse.success(toPaymentDto(payment)));
+    }
+    const result = await this.paymentService.verifyStripePayment({ paymentId: payment.id });
+    return res.json(
+      apiResponse.success({
+        paymentId: payment.id,
+        status: payment.status,
+        providerStatus: result.intent.status,
+      })
+    );
+  });
   uploadSlip = asyncHandler(async (req, res) =>
     res.status(201).json(
       apiResponse.success(

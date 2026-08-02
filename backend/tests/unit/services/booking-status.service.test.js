@@ -67,6 +67,11 @@ function fixture(
         return refunded ? { id: 'refund-1' } : null;
       },
     },
+    accessControlService: {
+      async assertAdminJourneyAccess() {
+        return true;
+      },
+    },
     transactionManager: {
       async transaction(callback) {
         return callback({

@@ -36,6 +36,7 @@ const paymentConfig = require('../config/payment');
 const WaitlistService = require('../modules/waitlist/waitlist.service');
 const WaitlistOfferService = require('../modules/waitlist/waitlist-offer.service');
 const WaitlistPriorityService = require('../modules/waitlist/waitlist-priority.service');
+const ReportService = require('../modules/reports/report.service');
 const waitlistConfig = require('../config/waitlist');
 const NotificationTemplateService = require('../modules/notifications/notification-template.service');
 const NotificationPreferenceService = require('../modules/notifications/notification-preference.service');
@@ -147,6 +148,7 @@ const bookingStatusService = new BookingStatusService({
   emailProvider,
   smsProvider,
   transactionManager,
+  accessControlService,
 });
 
 const services = {
@@ -184,6 +186,7 @@ const services = {
     transactionManager,
     notificationService,
     auditService,
+    accessControlService,
     maximumPassengers: fareConfig.maximumPassengersPerBooking,
   }),
   stationService: new StationService(repositories.stationRepository),
@@ -255,6 +258,7 @@ const paymentService = new PaymentService({
   auditService,
   notificationService,
   idempotencyService,
+  accessControlService,
 });
 const refundService = new RefundService({
   refundRepository: repositories.refundRepository,
@@ -312,5 +316,9 @@ Object.assign(services, {
   stripePaymentService,
   stripeWebhookService,
   paymentReconciliationService,
+  reportService: new ReportService({
+    reportRepository: repositories.reportRepository,
+    accessControlService,
+  }),
 });
 module.exports = services;

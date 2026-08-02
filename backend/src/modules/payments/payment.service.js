@@ -125,7 +125,7 @@ class PaymentService {
         return { replayed: true, response: idempotencyRecord.responseBody };
       const booking = await this.bookingRepository.findByIdForUpdate(input.bookingId, transaction);
       if (!booking) throw new NotFoundError('Booking not found');
-      this.verifyPaymentOwnership(booking, { id: input.userId, role: input.role });
+      await this.verifyPaymentOwnership(booking, { id: input.userId, role: input.role });
       this.#validateBooking(booking);
       if (await this.paymentRepository.findSuccessfulByBookingId(booking.id, { transaction }))
         throw new PaymentAlreadyProcessedError();
@@ -157,9 +157,13 @@ class PaymentService {
     });
   }
   verifyPaymentOwnership(booking, user) {
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(user?.role) && booking.userId !== user?.id)
-      throw new AuthorizationError('You cannot access this payment');
-    return true;
+    if (user?.role === 'SUPER_ADMIN' || booking.userId === user?.id) return true;
+    if (user?.role === 'ADMIN')
+      return this.accessControlService.assertAdminJourneyAccess({
+        actor: user,
+        journeyId: booking.journeyId,
+      });
+    throw new AuthorizationError('You cannot access this payment');
   }
   verifyPaymentAmount(payment, booking) {
     if (!toDecimal(payment.amount).eq(booking.totalAmount) || payment.currency !== booking.currency)
@@ -170,7 +174,7 @@ class PaymentService {
     const payment = await this.paymentRepository.findById(id, options);
     if (!payment) throw new NotFoundError('Payment not found');
     const booking = await this.bookingRepository.findById(payment.bookingId, options);
-    this.verifyPaymentOwnership(booking, requestingUser);
+    await this.verifyPaymentOwnership(booking, requestingUser);
     return payment;
   }
   getPaymentByReference(reference, options = {}) {

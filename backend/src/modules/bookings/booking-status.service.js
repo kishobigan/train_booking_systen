@@ -26,6 +26,7 @@ class BookingStatusService {
     refundRepository,
     notificationService,
     auditService,
+    accessControlService,
     transactionManager = sequelize,
     clock = () => new Date(),
   }) {
@@ -37,6 +38,7 @@ class BookingStatusService {
     this.refundRepository = refundRepository;
     this.notificationService = notificationService;
     this.auditService = auditService;
+    this.accessControlService = accessControlService;
     this.transactionManager = transactionManager;
     this.clock = clock;
   }
@@ -125,7 +127,7 @@ class BookingStatusService {
       throw new BookingStatusError(
         `Booking cannot transition from ${currentStatus} to ${targetStatus}.`
       );
-    this.#authorize(actor, targetStatus, booking);
+    await this.#authorize(actor, targetStatus, booking, transaction);
     if (
       [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.EXPIRED, BOOKING_STATUS.REFUNDED].includes(
         targetStatus
@@ -188,8 +190,13 @@ class BookingStatusService {
   async getStatusHistory({ bookingId, requestingUser }, options = {}) {
     const booking = await this.bookingRepository.findById(bookingId, options);
     if (!booking) throw new NotFoundError('Booking not found');
-    const privileged = ['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(requestingUser?.role);
-    if (!privileged && booking.userId !== requestingUser?.id)
+    const privileged = ['ADMIN', 'SUPER_ADMIN'].includes(requestingUser?.role);
+    if (requestingUser?.role === 'ADMIN')
+      await this.accessControlService.assertAdminJourneyAccess({
+        actor: requestingUser,
+        journeyId: booking.journeyId,
+      });
+    else if (requestingUser?.role !== 'SUPER_ADMIN' && booking.userId !== requestingUser?.id)
       throw new AuthorizationError('You cannot view this booking history');
     const history = await this.bookingStatusRepository.getStatusHistory(bookingId, options);
     return {
@@ -230,7 +237,7 @@ class BookingStatusService {
     return this.transitionBookingStatus({ ...input, targetStatus: BOOKING_STATUS.REFUNDED });
   }
 
-  #authorize(actor, targetStatus, booking) {
+  async #authorize(actor, targetStatus, booking, transaction) {
     if (!actor) throw new AuthorizationError('A transition actor is required');
     if (actor.type === 'SYSTEM') {
       if (
@@ -244,7 +251,13 @@ class BookingStatusService {
         throw new AuthorizationError('System actor cannot perform this transition');
       return;
     }
-    if (['ADMIN', 'SUPER_ADMIN'].includes(actor.role)) return;
+    if (actor.role === 'SUPER_ADMIN') return;
+    if (actor.role === 'ADMIN')
+      return this.accessControlService.assertAdminJourneyAccess({
+        actor: { id: actor.userId, role: actor.role },
+        journeyId: booking.journeyId,
+        transaction,
+      });
     if (
       actor.role === 'STAFF' &&
       [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED].includes(targetStatus)

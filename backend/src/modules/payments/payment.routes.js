@@ -16,6 +16,7 @@ function createPassengerPaymentRouter(services) {
   router.post('/bookings/:bookingId/payments', payment.create);
   router.get('/payments/:paymentId', payment.get);
   router.get('/payments/:paymentId/status', payment.status);
+  router.post('/payments/:paymentId/verify', payment.verify);
   router.post('/payments/:paymentId/bank-slip', upload.single('file'), payment.uploadSlip);
   router.get('/payments/:paymentId/refunds', refund.listPayment);
   return router;

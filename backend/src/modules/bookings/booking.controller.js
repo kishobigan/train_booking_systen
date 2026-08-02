@@ -51,12 +51,12 @@ class BookingController {
   });
   getById = asyncHandler(async (req, res) => {
     const booking = await this.bookingService.getBookingById(req.params.bookingId);
-    this.bookingService.validateBookingOwnership(booking, req.user);
+    await this.bookingService.assertBookingAccess(booking, req.user);
     res.status(200).json(apiResponse.success(booking));
   });
   getByReference = asyncHandler(async (req, res) => {
     const booking = await this.bookingService.getBookingByReference(req.params.reference);
-    this.bookingService.validateBookingOwnership(booking, req.user);
+    await this.bookingService.assertBookingAccess(booking, req.user);
     res.status(200).json(apiResponse.success(booking));
   });
   getMyBookings = asyncHandler(async (req, res) => {
@@ -66,7 +66,7 @@ class BookingController {
   });
   getTicket = asyncHandler(async (req, res) => {
     const booking = await this.bookingService.getBookingById(req.params.bookingId);
-    this.bookingService.validateBookingOwnership(booking, req.user);
+    await this.bookingService.assertBookingAccess(booking, req.user);
     res
       .status(200)
       .json(apiResponse.success(await this.bookingService.getBookingTicket(booking.id)));
@@ -76,7 +76,11 @@ class BookingController {
       .status(200)
       .json(
         apiResponse.success(
-          await this.bookingService.getJourneyBookings(req.params.journeyId, req.query)
+          await this.bookingService.getScopedJourneyBookings(
+            req.params.journeyId,
+            req.user,
+            req.query
+          )
         )
       );
   });

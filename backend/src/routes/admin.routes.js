@@ -8,6 +8,7 @@ const requirePasswordChanged = require('../common/middleware/require-password-ch
 const { createAdminPaymentRouter } = require('../modules/payments/payment.routes');
 const { createAdminWaitlistRouter } = require('../modules/waitlist/waitlist.routes');
 const { createAdminNotificationRouter } = require('../modules/notifications/notification.routes');
+const createReportRouter = require('../modules/reports/report.routes');
 
 function requireAdmin(req, res, next) {
   void res;
@@ -25,7 +26,9 @@ function createAdminRouter(services) {
   router.use(createAdminPaymentRouter(services));
   router.use(createAdminWaitlistRouter(services));
   router.use(createAdminNotificationRouter(services));
+  router.use(createReportRouter(services));
   router.patch('/bookings/:bookingId/status', controller.updateStatus);
+  router.get('/bookings/:bookingId', controller.getById);
   router.get('/journeys/:journeyId/bookings', controller.getJourneyBookings);
   router.post('/bookings/:bookingId/complete', controller.completeBooking);
   router.post('/bookings/:bookingId/cancel', controller.cancelBooking);

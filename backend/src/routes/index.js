@@ -34,9 +34,11 @@ router.use('/auth', createAuthRouter(services));
 router.use(createPublicRouter(services));
 const authenticate = authenticateFactory(services.authService);
 router.use('/passenger', authenticate, createPassengerRouter(services));
+router.use(authenticate, createPassengerRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminPaymentRouter(services));
 router.use('/super-admin/routes', authenticate, createRouteAdminRouter(services));
+router.use('/super-admin', authenticate, createAdminRouter(services));
 router.use('/admin', authenticate, createAdminUserRouter(services));
 router.use('/admin', authenticate, createAdminRouter(services));
 

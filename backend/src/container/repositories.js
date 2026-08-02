@@ -33,6 +33,7 @@ const repositoryClasses = {
   bankSlipRepository: require('../modules/payments/bank-slip.repository'),
   idempotencyRepository: require('../modules/payments/idempotency.repository'),
   reconciliationRepository: require('../modules/payments/reconciliation.repository'),
+  reportRepository: require('../modules/reports/report.repository'),
 };
 
 module.exports = Object.fromEntries(

@@ -24,6 +24,7 @@ class BookingService {
     notificationService,
     auditService,
     bookingStatusRepository,
+    accessControlService,
     holdMinutes = Number(process.env.BOOKING_HOLD_MINUTES || 10),
     maximumPassengers = Number(process.env.MAX_PASSENGERS_PER_BOOKING || 6),
     clock = () => new Date(),
@@ -42,6 +43,7 @@ class BookingService {
       notificationService,
       auditService,
       bookingStatusRepository,
+      accessControlService,
     });
     this.holdMinutes = holdMinutes;
     this.maximumPassengers = maximumPassengers;
@@ -246,7 +248,7 @@ class BookingService {
   /** Cancel an owned or privileged held/confirmed booking. */
   async cancelBooking({ bookingId, requestingUser, reason, actor }) {
     const booking = await this.getBookingById(bookingId);
-    this.validateBookingOwnership(booking, requestingUser);
+    await this.assertBookingAccess(booking, requestingUser);
     return this.bookingStatusService.cancelBooking({
       bookingId,
       actor: actor || { type: 'USER', userId: requestingUser?.id, role: requestingUser?.role },
@@ -281,6 +283,10 @@ class BookingService {
   getJourneyBookings(journeyId, options = {}) {
     return this.bookingRepository.findByJourneyId(journeyId, options);
   }
+  async getScopedJourneyBookings(journeyId, actor, options = {}) {
+    await this.accessControlService.assertAdminJourneyAccess({ actor, journeyId });
+    return this.getJourneyBookings(journeyId, options);
+  }
   /** Return compact booking totals and lifecycle data. */
   async getBookingSummary(id, options = {}) {
     const booking = await this.getBookingById(id, options);
@@ -297,6 +303,8 @@ class BookingService {
   /** Return ticket-safe journey, segment, passenger and seat details. */
   async getBookingTicket(id, options = {}) {
     const booking = await this.getBookingById(id, options);
+    if (!['CONFIRMED', 'COMPLETED'].includes(booking.status))
+      throw new BookingConflictError('Tickets are available only for confirmed bookings');
     return {
       bookingId: booking.id,
       bookingReference: booking.bookingReference,
@@ -327,8 +335,16 @@ class BookingService {
   }
   /** Verify passenger ownership or staff/admin authority. */
   validateBookingOwnership(booking, user) {
-    if (['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(user?.role) || booking.userId === user?.id)
-      return true;
+    if (user?.role === 'SUPER_ADMIN' || booking.userId === user?.id) return true;
+    throw new AuthorizationError('You cannot access this booking');
+  }
+  async assertBookingAccess(booking, actor) {
+    if (actor?.role === 'SUPER_ADMIN' || booking.userId === actor?.id) return true;
+    if (actor?.role === 'ADMIN')
+      return this.accessControlService.assertAdminJourneyAccess({
+        actor,
+        journeyId: booking.journeyId,
+      });
     throw new AuthorizationError('You cannot access this booking');
   }
   /** Validate booking open/close timestamps against server time. */
