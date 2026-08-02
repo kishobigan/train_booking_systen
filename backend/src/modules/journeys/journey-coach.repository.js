@@ -26,5 +26,8 @@ class JourneyCoachRepository extends BaseRepository {
       ],
     });
   }
+  deleteByJourney(journeyId, options = {}) {
+    return this.model.destroy({ ...options, where: { journeyId } });
+  }
 }
 module.exports = JourneyCoachRepository;

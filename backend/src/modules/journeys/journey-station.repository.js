@@ -21,5 +21,8 @@ class JourneyStationRepository extends BaseRepository {
   findByJourneyAndStation(journeyId, stationId, options = {}) {
     return this.findOne({ journeyId, stationId }, options);
   }
+  deleteByJourney(journeyId, options = {}) {
+    return this.model.destroy({ ...options, where: { journeyId } });
+  }
 }
 module.exports = JourneyStationRepository;

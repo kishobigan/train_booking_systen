@@ -18,6 +18,9 @@ class JourneyRepository extends BaseRepository {
   findByServiceAndDate(serviceNumber, journeyDate, options = {}) {
     return this.findOne({ serviceNumber, journeyDate }, options);
   }
+  findByTrainAndDeparture(trainId, scheduledDepartureAt, options = {}) {
+    return this.findOne({ trainId, scheduledDepartureAt }, options);
+  }
   search({ routeId, trainId, dateFrom, dateTo, statuses } = {}, options = {}) {
     const where = {};
     if (routeId) where.routeId = routeId;
