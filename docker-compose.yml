@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: train_booking_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: train_booking
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d train_booking"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: train_booking_backend
+    restart: unless-stopped
+    ports:
+      - "4050:4050"
+    environment:
+      PORT: 4050
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4050
+    container_name: train_booking_frontend
+    restart: unless-stopped
+    ports:
+      - "3050:3050"
+    environment:
+      PORT: 3050
+      HOSTNAME: "0.0.0.0"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
