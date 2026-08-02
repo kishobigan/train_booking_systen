@@ -38,6 +38,11 @@ class Payment extends Model {
   static associate(models) {
     Payment.belongsTo(models.Booking, { as: 'booking', foreignKey: 'bookingId' });
     Payment.hasMany(models.Refund, { as: 'refunds', foreignKey: 'paymentId' });
+    Payment.hasMany(models.BankPaymentSlip, { as: 'bankSlips', foreignKey: 'paymentId' });
+    Payment.hasMany(models.PaymentReconciliationLog, {
+      as: 'reconciliationLogs',
+      foreignKey: 'paymentId',
+    });
   }
   isSuccessful() {
     return this.status === PAYMENT_STATUS.PAID;

@@ -29,6 +29,10 @@ const repositoryClasses = {
   refreshTokenRepository: require('../modules/auth/refresh-token.repository'),
   adminJourneyRepository: require('../modules/access-control/admin-journey.repository'),
   staffStationRepository: require('../modules/access-control/staff-station.repository'),
+  paymentWebhookRepository: require('../modules/payments/payment-webhook.repository'),
+  bankSlipRepository: require('../modules/payments/bank-slip.repository'),
+  idempotencyRepository: require('../modules/payments/idempotency.repository'),
+  reconciliationRepository: require('../modules/payments/reconciliation.repository'),
 };
 
 module.exports = Object.fromEntries(

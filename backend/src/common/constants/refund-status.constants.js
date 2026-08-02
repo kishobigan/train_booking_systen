@@ -1,0 +1,8 @@
+'use strict';
+module.exports = Object.freeze({
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  PENDING_MANUAL_PROCESSING: 'PENDING_MANUAL_PROCESSING',
+  COMPLETED: 'REFUNDED',
+  FAILED: 'FAILED',
+});

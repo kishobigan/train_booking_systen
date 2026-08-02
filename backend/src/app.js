@@ -7,6 +7,8 @@ const logger = require('./config/logger');
 const apiV1Router = require('./routes');
 const notFoundMiddleware = require('./common/middleware/not-found.middleware');
 const errorHandlerMiddleware = require('./common/middleware/error-handler.middleware');
+const services = require('./container/services');
+const { stripeWebhookHandler } = require('./modules/payments/payment.routes');
 
 function createApp() {
   const app = express();
@@ -14,6 +16,11 @@ function createApp() {
   app.disable('x-powered-by');
   app.use(pinoHttp({ logger }));
   app.use(cors());
+  app.post(
+    '/api/v1/webhooks/stripe',
+    express.raw({ type: 'application/json' }),
+    stripeWebhookHandler(services)
+  );
   app.use(express.json());
 
   app.get('/api', (req, res) => {

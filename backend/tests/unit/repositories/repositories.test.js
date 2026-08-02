@@ -6,7 +6,7 @@ const test = require('node:test');
 const BaseRepository = require('../../../src/common/repositories/BaseRepository');
 const repositories = require('../../../src/container/repositories');
 test('repository container exposes every requested repository', () => {
-  assert.equal(Object.keys(repositories).length, 28);
+  assert.equal(Object.keys(repositories).length, 32);
   for (const repository of Object.values(repositories)) {
     assert(
       repository instanceof BaseRepository ||

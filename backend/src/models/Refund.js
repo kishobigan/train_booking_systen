@@ -24,6 +24,12 @@ class Refund extends Model {
         reason: { type: DataTypes.TEXT },
         status: enumType(PAYMENT_STATUS, { defaultValue: PAYMENT_STATUS.PROCESSING }),
         processedAt: { type: DataTypes.DATE },
+        manualRefundReference: string(150),
+        processedByUserId: { type: DataTypes.UUID },
+        manualRefundNote: { type: DataTypes.TEXT },
+        providerResponse: { type: DataTypes.JSONB },
+        failureCode: string(100),
+        failureMessage: { type: DataTypes.TEXT },
       },
       modelOptions(sequelize, 'refunds', { timestamps: true })
     );
@@ -32,6 +38,10 @@ class Refund extends Model {
   static associate(models) {
     Refund.belongsTo(models.Payment, { as: 'payment', foreignKey: 'paymentId' });
     Refund.belongsTo(models.Booking, { as: 'booking', foreignKey: 'bookingId' });
+    Refund.hasMany(models.PaymentReconciliationLog, {
+      as: 'reconciliationLogs',
+      foreignKey: 'refundId',
+    });
   }
 }
 module.exports = Refund;

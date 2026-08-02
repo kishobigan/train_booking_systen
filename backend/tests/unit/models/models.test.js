@@ -9,9 +9,12 @@ const { DataTypes } = require('sequelize');
 const models = require('../../../src/models');
 
 test('all migration-backed models load with the correct tables', () => {
-  assert.equal(Object.keys(models).length, 29);
+  assert.equal(Object.keys(models).length, 32);
   assert.equal(models.AdminJourney.tableName, 'admin_journeys');
   assert.equal(models.StaffStation.tableName, 'staff_stations');
+  assert.equal(models.BankPaymentSlip.tableName, 'bank_payment_slips');
+  assert.equal(models.IdempotencyRecord.tableName, 'idempotency_records');
+  assert.equal(models.PaymentReconciliationLog.tableName, 'payment_reconciliation_logs');
   assert.equal(models.User.getTableName(), 'users');
   assert.equal(models.ActiveSeatAllocation.getTableName(), 'active_seat_allocations');
   assert.equal(models.JourneyDisruption.getTableName(), 'journey_disruptions');

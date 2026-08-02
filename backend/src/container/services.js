@@ -24,6 +24,15 @@ const fareConfig = require('../config/fare');
 const AccessControlService = require('../modules/access-control/access-control.service');
 const UserService = require('../modules/users/user.service');
 const AuthService = require('../modules/auth/auth.service');
+const PaymentService = require('../modules/payments/payment.service');
+const StripePaymentService = require('../modules/payments/stripe-payment.service');
+const StripeWebhookService = require('../modules/payments/stripe-webhook.service');
+const BankSlipService = require('../modules/payments/bank-slip.service');
+const PaymentReconciliationService = require('../modules/payments/payment-reconciliation.service');
+const IdempotencyService = require('../modules/payments/idempotency.service');
+const RefundService = require('../modules/refunds/refund.service');
+const { LocalFileStorageProvider } = require('../lib/file-storage');
+const paymentConfig = require('../config/payment');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -98,7 +107,7 @@ const bookingStatusService = new BookingStatusService({
   transactionManager,
 });
 
-module.exports = {
+const services = {
   fareCalculationService,
   seatAvailabilityService,
   bookingStatusService,
@@ -159,3 +168,72 @@ module.exports = {
     trainRepository: repositories.trainRepository,
   }),
 };
+
+const stripePaymentService = new StripePaymentService();
+const idempotencyService = new IdempotencyService(repositories.idempotencyRepository);
+const paymentService = new PaymentService({
+  paymentRepository: repositories.paymentRepository,
+  bookingRepository: repositories.bookingRepository,
+  stripePaymentService,
+  bookingService: services.bookingService,
+  bookingStatusService,
+  transactionManager,
+  auditService,
+  notificationService,
+  idempotencyService,
+});
+const refundService = new RefundService({
+  refundRepository: repositories.refundRepository,
+  paymentRepository: repositories.paymentRepository,
+  bookingRepository: repositories.bookingRepository,
+  stripePaymentService,
+  paymentService,
+  accessControlService,
+  idempotencyService,
+  bookingStatusService,
+  auditService,
+  transactionManager,
+});
+paymentService.refundService = refundService;
+const bankSlipService = new BankSlipService({
+  bankSlipRepository: repositories.bankSlipRepository,
+  paymentRepository: repositories.paymentRepository,
+  bookingRepository: repositories.bookingRepository,
+  paymentService,
+  accessControlService,
+  idempotencyService,
+  storageProvider: new LocalFileStorageProvider(paymentConfig.slip.storageRoot),
+  transactionManager,
+  auditService,
+  notificationService,
+});
+const stripeWebhookService = new StripeWebhookService({
+  stripePaymentService,
+  paymentWebhookRepository: repositories.paymentWebhookRepository,
+  paymentRepository: repositories.paymentRepository,
+  refundRepository: repositories.refundRepository,
+  paymentService,
+  refundService,
+  auditService,
+  transactionManager,
+});
+const paymentReconciliationService = new PaymentReconciliationService({
+  paymentRepository: repositories.paymentRepository,
+  refundRepository: repositories.refundRepository,
+  bankSlipRepository: repositories.bankSlipRepository,
+  reconciliationRepository: repositories.reconciliationRepository,
+  stripePaymentService,
+  paymentService,
+  bookingStatusService,
+  auditService,
+  transactionManager,
+});
+Object.assign(services, {
+  paymentService,
+  refundService,
+  bankSlipService,
+  stripePaymentService,
+  stripeWebhookService,
+  paymentReconciliationService,
+});
+module.exports = services;

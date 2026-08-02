@@ -24,6 +24,29 @@ const maximum = (left, right) => Decimal.max(toDecimal(left), toDecimal(right));
 const roundCurrency = (value) => toDecimal(value).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
 const formatAmount = (value) => roundCurrency(value).toFixed(2);
 const formatDecimal = (value, scale) => toDecimal(value).toFixed(scale);
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF',
+  'CLP',
+  'DJF',
+  'GNF',
+  'JPY',
+  'KMF',
+  'KRW',
+  'MGA',
+  'PYG',
+  'RWF',
+  'UGX',
+  'VND',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
+]);
+const toMinorUnits = (value, currency) =>
+  toDecimal(value)
+    .times(ZERO_DECIMAL_CURRENCIES.has(String(currency).toUpperCase()) ? 1 : 100)
+    .toDecimalPlaces(0)
+    .toNumber();
 
 module.exports = {
   Decimal,
@@ -37,4 +60,5 @@ module.exports = {
   roundCurrency,
   formatAmount,
   formatDecimal,
+  toMinorUnits,
 };

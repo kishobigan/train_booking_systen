@@ -234,9 +234,12 @@ class BookingStatusService {
     if (!actor) throw new AuthorizationError('A transition actor is required');
     if (actor.type === 'SYSTEM') {
       if (
-        ![BOOKING_STATUS.EXPIRED, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.REFUNDED].includes(
-          targetStatus
-        )
+        ![
+          BOOKING_STATUS.CONFIRMED,
+          BOOKING_STATUS.EXPIRED,
+          BOOKING_STATUS.COMPLETED,
+          BOOKING_STATUS.REFUNDED,
+        ].includes(targetStatus)
       )
         throw new AuthorizationError('System actor cannot perform this transition');
       return;
