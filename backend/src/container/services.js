@@ -191,6 +191,8 @@ const services = {
     routeRepository: repositories.routeRepository,
     routeStationRepository: repositories.routeStationRepository,
     stationRepository: repositories.stationRepository,
+    journeyRepository: repositories.journeyRepository,
+    auditService,
   }),
   trainService: new TrainService(repositories.trainRepository),
   coachService: new CoachService({

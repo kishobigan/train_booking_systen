@@ -5,6 +5,8 @@ const NotFoundError = require('../../common/errors/NotFoundError');
 const ValidationError = require('../../common/errors/ValidationError');
 const StationRepository = require('./station.repository');
 const { normalizeStationInput } = require('./station.dto');
+const { normalizePagination, paginationMeta } = require('../../common/utils/pagination');
+const SORT_FIELDS = new Set(['name', 'code', 'city', 'district', 'createdAt']);
 
 class StationService {
   constructor(stationRepository = new StationRepository()) {
@@ -44,9 +46,33 @@ class StationService {
     });
   }
 
+  async getStations(filters = {}, options = {}) {
+    const { page, limit, offset } = normalizePagination(filters);
+    const sortBy = SORT_FIELDS.has(filters.sortBy) ? filters.sortBy : 'name';
+    const sortOrder = String(filters.sortOrder || 'asc').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const where = {
+      ...(filters.isActive !== undefined && { isActive: filters.isActive }),
+      ...(filters.city && { city: filters.city.trim() }),
+      ...(filters.district && { district: filters.district.trim() }),
+    };
+    const result = await this.stationRepository.findAllPaginated(where, {
+      ...options,
+      limit,
+      offset,
+      order: [[sortBy, sortOrder]],
+    });
+    return {
+      items: result.rows,
+      pagination: paginationMeta({ page, limit, totalItems: result.count }),
+    };
+  }
+
   searchStations(query, options = {}) {
     const term = typeof query === 'string' ? query.trim() : '';
-    if (!term) throw new ValidationError('A station search term is required', { field: 'query' });
+    if (term.length < 2)
+      throw new ValidationError('Station search requires at least two characters', {
+        field: 'query',
+      });
     const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 100);
     return this.stationRepository.search(term, { ...options, limit });
   }

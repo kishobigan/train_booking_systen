@@ -13,6 +13,7 @@ class AvailabilityController {
     );
     res.status(200).json(apiResponse.success(await this.service.getAvailableSeats(input)));
   });
+  getSeatAvailability = this.getAvailableSeats;
   getSummary = asyncHandler(async (req, res) => {
     const input = validateAvailabilityInput(
       availabilityDto({ journeyId: req.params.journeyId, ...req.query })
@@ -21,11 +22,14 @@ class AvailabilityController {
       .status(200)
       .json(apiResponse.success(await this.service.getJourneyAvailabilitySummary(input)));
   });
+  getAvailabilitySummary = this.getSummary;
   getCoachAvailability = asyncHandler(async (req, res) => {
     const input = validateAvailabilityInput(
       availabilityDto({ journeyId: req.params.journeyId, ...req.query })
     );
-    res.status(200).json(apiResponse.success(await this.service.getCoachAvailability(input)));
+    res
+      .status(200)
+      .json(apiResponse.success(await this.service.getCoachAvailabilityResponse(input)));
   });
   getTimeline = asyncHandler(async (req, res) => {
     res.status(200).json(

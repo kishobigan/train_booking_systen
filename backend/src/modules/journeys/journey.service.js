@@ -14,6 +14,7 @@ const RouteRepository = require('../routes/route.repository');
 const TrainRepository = require('../trains/train.repository');
 const { normalizeJourneyInput } = require('./journey.dto');
 const logger = require('../../config/logger');
+const { normalizePagination, paginationMeta } = require('../../common/utils/pagination');
 
 class JourneyService {
   constructor({
@@ -65,7 +66,67 @@ class JourneyService {
   }
 
   searchJourneys(filters = {}, options = {}) {
+    if (filters.originStationId) return this.searchPublicJourneys(filters, options);
     return this.journeyRepository.search(filters, options);
+  }
+
+  async searchPublicJourneys(filters, options = {}) {
+    const { page, limit, offset } = normalizePagination(filters);
+    const rows = await this.journeyRepository.searchPublicJourneys(
+      {
+        ...filters,
+        coachClass: filters.coachClass || null,
+        passengerCount: filters.passengerCount || 1,
+        limit,
+        offset,
+      },
+      options
+    );
+    const totalItems = Number(rows[0]?.totalCount || 0);
+    return {
+      search: {
+        originStationId: filters.originStationId,
+        destinationStationId: filters.destinationStationId,
+        date: filters.date,
+        passengerCount: filters.passengerCount || 1,
+      },
+      items: rows.map((row) => ({
+        journeyId: row.journeyId,
+        serviceNumber: row.serviceNumber,
+        train: { id: row.trainId, trainNumber: row.trainNumber, name: row.trainName },
+        route: { id: row.routeId, code: row.routeCode, name: row.routeName },
+        origin: {
+          journeyStationId: row.originJourneyStationId,
+          stationId: row.originStationId,
+          code: row.originCode,
+          name: row.originName,
+          sequenceNumber: row.originSequence,
+          scheduledDepartureAt: row.originDepartureAt,
+        },
+        destination: {
+          journeyStationId: row.destinationJourneyStationId,
+          stationId: row.destinationStationId,
+          code: row.destinationCode,
+          name: row.destinationName,
+          sequenceNumber: row.destinationSequence,
+          scheduledArrivalAt: row.destinationArrivalAt,
+        },
+        durationMinutes: row.durationMinutes,
+        status: row.status,
+        availableSeatCount: Number(row.availableSeatCount),
+        minimumFare: null,
+        currency: 'LKR',
+      })),
+      pagination: paginationMeta({ page, limit, totalItems }),
+    };
+  }
+
+  async getPublicJourneyDetails(id, options = {}) {
+    const journey = await this.journeyRepository.findByIdWithDetails(id, options);
+    if (!journey) throw new NotFoundError('Journey not found');
+    if (['CANCELLED', 'COMPLETED'].includes(journey.status))
+      throw new ConflictError('Journey is not publicly searchable');
+    return journey;
   }
 
   async updateJourney(id, input, options = {}) {

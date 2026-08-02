@@ -8,6 +8,8 @@ const RouteRepository = require('./route.repository');
 const RouteStationRepository = require('./route-station.repository');
 const StationRepository = require('../stations/station.repository');
 const { normalizeRouteInput, normalizeRouteStationInput } = require('./route.dto');
+const AuthorizationError = require('../../common/errors/AuthorizationError');
+const { normalizePagination, paginationMeta } = require('../../common/utils/pagination');
 
 class RouteService {
   constructor({
@@ -15,11 +17,15 @@ class RouteService {
     routeStationRepository = new RouteStationRepository(),
     stationRepository = new StationRepository(),
     transactionProvider = sequelize,
+    journeyRepository,
+    auditService,
   } = {}) {
     this.routeRepository = routeRepository;
     this.routeStationRepository = routeStationRepository;
     this.stationRepository = stationRepository;
     this.transactionProvider = transactionProvider;
+    this.journeyRepository = journeyRepository;
+    this.auditService = auditService;
   }
 
   async createRoute(input, options = {}) {
@@ -28,6 +34,34 @@ class RouteService {
     await this.#ensureCodeAvailable(values.code, null, options);
     await this.#validateEndpoints(values.startStationId, values.endStationId, options);
     return this.routeRepository.create(values, options);
+  }
+
+  createRouteWithStations(input, options = {}) {
+    this.#assertSuperAdmin(input.actor);
+    return this.#withTransaction(options, async (transactionOptions) => {
+      const values = normalizeRouteInput(input);
+      this.#validateRoute(values, true);
+      await this.#ensureCodeAvailable(values.code, null, transactionOptions);
+      await this.#validateEndpoints(values.startStationId, values.endStationId, transactionOptions);
+      const stations = this.#validateNewStationOrder(input.stations, values);
+      await Promise.all(
+        stations.map(async (item) => {
+          const station = await this.#getStation(item.stationId, transactionOptions);
+          if (!station.isActive) throw new ValidationError('Inactive stations cannot be added');
+        })
+      );
+      const totalDistanceKm = stations.at(-1).distanceFromStartKm;
+      const route = await this.routeRepository.create(
+        { ...values, totalDistanceKm },
+        transactionOptions
+      );
+      await this.routeStationRepository.bulkCreate(
+        stations.map((item) => ({ routeId: route.id, ...item })),
+        transactionOptions
+      );
+      await this.#audit(route, 'ROUTE_CREATED', input.actor, transactionOptions);
+      return this.getRouteWithStations(route.id, transactionOptions);
+    });
   }
 
   async getRoute(id, options = {}) {
@@ -60,6 +94,20 @@ class RouteService {
     });
   }
 
+  async getRoutes(filters = {}, options = {}) {
+    const { page, limit, offset } = normalizePagination(filters);
+    const result = await this.routeRepository.findAllPaginated(filters, {
+      ...options,
+      limit,
+      offset,
+      order: [['name', 'ASC']],
+    });
+    return {
+      items: result.rows,
+      pagination: paginationMeta({ page, limit, totalItems: result.count }),
+    };
+  }
+
   async updateRoute(id, input, options = {}) {
     const route = await this.getRoute(id, options);
     const values = normalizeRouteInput(input);
@@ -76,6 +124,22 @@ class RouteService {
     const route = await this.getRoute(id, options);
     await route.destroy(options);
     return true;
+  }
+
+  async deactivateRoute(id, actor, options = {}) {
+    this.#assertSuperAdmin(actor);
+    const route = await this.getRoute(id, options);
+    const journeyCount = this.journeyRepository
+      ? await this.journeyRepository.count({ routeId: id }, options)
+      : 1;
+    if (journeyCount > 0) {
+      await route.update({ isActive: false }, options);
+      await this.#audit(route, 'ROUTE_DEACTIVATED', actor, options);
+      return { id: route.id, isActive: false, deletionMode: 'DEACTIVATED' };
+    }
+    await route.destroy(options);
+    await this.#audit(route, 'ROUTE_DELETED', actor, options);
+    return { id: route.id, isActive: false, deletionMode: 'DELETED' };
   }
 
   addStation(routeId, input, options = {}) {
@@ -111,6 +175,7 @@ class RouteService {
       const orderedIds = records.map((record) => record.id);
       orderedIds.splice(requestedSequence, 0, created.id);
       const allRecords = [...records, created];
+      this.#validateDistanceOrder(allRecords, orderedIds);
       await this.#resequence(allRecords, orderedIds, transactionOptions);
       await this.#syncEndpoints(route, allRecords, orderedIds, transactionOptions);
       return created.reload ? created.reload(transactionOptions) : created;
@@ -143,6 +208,51 @@ class RouteService {
       await this.#resequence(records, orderedRouteStationIds, transactionOptions);
       await this.#syncEndpoints(route, records, orderedRouteStationIds, transactionOptions);
       return this.routeStationRepository.findByRoute(routeId, transactionOptions);
+    });
+  }
+
+  reorderRouteStations(routeId, stations, options = {}) {
+    return this.#withTransaction(options, async (transactionOptions) => {
+      const records = await this.#getLockedRouteStations(routeId, transactionOptions);
+      const orderedIds = stations.map((item) => item.routeStationId);
+      this.#validateOrdering(records, orderedIds);
+      const byId = new Map(records.map((record) => [record.id, record]));
+      const distances = stations.map((item) => Number(item.distanceFromStartKm));
+      if (
+        distances[0] !== 0 ||
+        distances.some((value, index) => index && value < distances[index - 1])
+      )
+        throw new ValidationError('Route distances must start at zero and never decrease');
+      for (const item of stations)
+        await byId
+          .get(item.routeStationId)
+          .update({ distanceFromStartKm: item.distanceFromStartKm }, transactionOptions);
+      await this.#resequence(records, orderedIds, transactionOptions);
+      const route = await this.getRoute(routeId, transactionOptions);
+      await this.#syncEndpoints(route, records, orderedIds, transactionOptions);
+      await route.update({ totalDistanceKm: distances.at(-1) }, transactionOptions);
+      return this.routeStationRepository.findByRoute(routeId, transactionOptions);
+    });
+  }
+
+  updateRouteStation(routeId, routeStationId, input, options = {}) {
+    return this.#withTransaction(options, async (transactionOptions) => {
+      const records = await this.#getLockedRouteStations(routeId, transactionOptions);
+      const record = records.find((item) => item.id === routeStationId);
+      if (!record) throw new NotFoundError('Route station not found');
+      const values = normalizeRouteStationInput(input);
+      delete values.stationId;
+      await record.update(values, transactionOptions);
+      const ordered = [...records].sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+      const distances = ordered.map((item) => Number(item.distanceFromStartKm));
+      if (
+        distances[0] !== 0 ||
+        distances.some((value, index) => index && value < distances[index - 1])
+      )
+        throw new ValidationError('Route station distances are invalid');
+      const route = await this.getRoute(routeId, transactionOptions);
+      await route.update({ totalDistanceKm: distances.at(-1) }, transactionOptions);
+      return record;
     });
   }
 
@@ -243,9 +353,22 @@ class RouteService {
       {
         startStationId: byId.get(orderedIds[0]).stationId,
         endStationId: byId.get(orderedIds[orderedIds.length - 1]).stationId,
+        totalDistanceKm: byId.get(orderedIds[orderedIds.length - 1]).distanceFromStartKm,
       },
       options
     );
+  }
+
+  #validateDistanceOrder(records, orderedIds) {
+    const byId = new Map(records.map((record) => [record.id, record]));
+    const distances = orderedIds.map((id) => Number(byId.get(id).distanceFromStartKm));
+    if (
+      distances.some(Number.isNaN) ||
+      distances[0] !== 0 ||
+      distances.some((value, index) => index && value < distances[index - 1])
+    ) {
+      throw new ValidationError('Route distances must start at zero and never decrease');
+    }
   }
 
   #validateOrdering(records, orderedIds) {
@@ -307,6 +430,46 @@ class RouteService {
 
   #reverseOffset(totalOffset, offset) {
     return offset == null ? null : totalOffset - Number(offset);
+  }
+
+  #assertSuperAdmin(actor) {
+    if (actor?.role !== 'SUPER_ADMIN')
+      throw new AuthorizationError('Super administrator access is required');
+  }
+
+  #validateNewStationOrder(input, route) {
+    if (!Array.isArray(input) || input.length < 2)
+      throw new ValidationError('A route requires at least two stations');
+    const stations = input.map((item) => ({
+      ...normalizeRouteStationInput(item),
+      sequenceNumber: Number(item.sequenceNumber),
+    }));
+    if (new Set(stations.map((item) => item.stationId)).size !== stations.length)
+      throw new ValidationError('Route station IDs must be unique');
+    stations.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+    if (stations.some((item, index) => item.sequenceNumber !== index))
+      throw new ValidationError('Route station sequences must be continuous from zero');
+    if (
+      stations[0].stationId !== route.startStationId ||
+      stations.at(-1).stationId !== route.endStationId
+    )
+      throw new ValidationError('First and last route stations must match route endpoints');
+    const distances = stations.map((item) => Number(item.distanceFromStartKm));
+    if (
+      distances.some(Number.isNaN) ||
+      distances[0] !== 0 ||
+      distances.some((value, index) => index && value < distances[index - 1])
+    )
+      throw new ValidationError('Route distances must start at zero and never decrease');
+    return stations;
+  }
+
+  #audit(route, action, actor, options = {}) {
+    if (!this.auditService?.record) return null;
+    return this.auditService.record(
+      { userId: actor?.id, action, entityType: 'Route', entityId: route.id },
+      options.transaction ? { transaction: options.transaction } : options
+    );
   }
 }
 

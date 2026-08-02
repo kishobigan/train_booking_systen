@@ -129,9 +129,23 @@ class SeatAvailabilityService {
     return {
       journeyId: input.journeyId,
       ...resolved.segment,
+      segment: {
+        originJourneyStationId: input.originJourneyStationId,
+        destinationJourneyStationId: input.destinationJourneyStationId,
+        ...resolved.segment,
+      },
       totalAvailable,
+      totalAvailableSeats: totalAvailable,
       page,
       limit,
+      pagination: {
+        page,
+        limit,
+        totalItems: totalAvailable,
+        totalPages: Math.ceil(totalAvailable / limit),
+        hasNextPage: page * limit < totalAvailable,
+        hasPreviousPage: page > 1,
+      },
       coaches: this.#groupSeats(seats, coachCounts),
     };
   }
@@ -167,6 +181,18 @@ class SeatAvailabilityService {
     }));
   }
 
+  async getCoachAvailabilityResponse(input, options = {}) {
+    const filters = await this.#resolveFilters(input, options);
+    return {
+      journeyId: input.journeyId,
+      segment: {
+        originSequence: filters.originSequence,
+        destinationSequence: filters.destinationSequence,
+      },
+      coaches: await this.getCoachAvailability(filters, options),
+    };
+  }
+
   /** Return journey-wide reserved-seat availability for a segment. */
   async getJourneyAvailabilitySummary(input, options = {}) {
     const filters = await this.#resolveFilters(input, options);
@@ -174,6 +200,19 @@ class SeatAvailabilityService {
       this.availabilityRepository.getJourneySeatTotals(filters, options),
       this.getCoachAvailability(filters, options),
     ]);
+    const byClass = new Map();
+    for (const coach of coaches) {
+      const item = byClass.get(coach.coachClass) || {
+        coachClass: coach.coachClass,
+        totalSeats: 0,
+        availableSeats: 0,
+        unavailableSeats: 0,
+      };
+      item.totalSeats += coach.totalSeats;
+      item.availableSeats += coach.availableSeats;
+      item.unavailableSeats += coach.unavailableSeats;
+      byClass.set(coach.coachClass, item);
+    }
     return {
       journeyId: input.journeyId,
       segment: {
@@ -182,6 +221,7 @@ class SeatAvailabilityService {
       },
       ...totals,
       occupancyPercentage: this.#percentage(totals.unavailableSeats, totals.totalReservedSeats),
+      byCoachClass: [...byClass.values()],
       coaches,
     };
   }

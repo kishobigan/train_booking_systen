@@ -5,6 +5,8 @@ function createAvailabilityRouter(service) {
   const router = express.Router({ mergeParams: true });
   const controller = new AvailabilityController(service);
   router.get('/', controller.getAvailableSeats);
+  router.get('/seats', controller.getSeatAvailability);
+  router.get('/coaches', controller.getCoachAvailability);
   router.get('/summary', controller.getSummary);
   return router;
 }

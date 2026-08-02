@@ -1,5 +1,5 @@
 'use strict';
-const { Op } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
 const BaseRepository = require('../../common/repositories/BaseRepository');
 const {
   Journey,
@@ -44,6 +44,8 @@ class JourneyRepository extends BaseRepository {
     return this.model.findByPk(id, {
       ...options,
       include: [
+        { model: Route, as: 'route' },
+        { model: Train, as: 'train' },
         {
           model: JourneyStation,
           as: 'journeyStations',
@@ -63,6 +65,68 @@ class JourneyRepository extends BaseRepository {
         [{ model: JourneyCoach, as: 'journeyCoaches' }, 'positionNumber', 'ASC'],
       ],
     });
+  }
+  searchPublicJourneys(input, options = {}) {
+    return this.model.sequelize.query(
+      `SELECT result.*, COUNT(*) OVER()::INTEGER AS "totalCount" FROM (
+        SELECT j.id AS "journeyId", j.service_number AS "serviceNumber", j.status,
+          j.route_id AS "routeId", r.code AS "routeCode", r.name AS "routeName",
+          j.train_id AS "trainId", t.train_number AS "trainNumber", t.name AS "trainName",
+          ojs.id AS "originJourneyStationId", ojs.station_id AS "originStationId",
+          os.code AS "originCode", os.name AS "originName", ojs.sequence_number AS "originSequence",
+          ojs.scheduled_departure_at AS "originDepartureAt",
+          djs.id AS "destinationJourneyStationId", djs.station_id AS "destinationStationId",
+          ds.code AS "destinationCode", ds.name AS "destinationName", djs.sequence_number AS "destinationSequence",
+          djs.scheduled_arrival_at AS "destinationArrivalAt",
+          FLOOR(EXTRACT(EPOCH FROM (djs.scheduled_arrival_at - ojs.scheduled_departure_at)) / 60)::INTEGER AS "durationMinutes",
+          (SELECT COUNT(*)::INTEGER FROM journey_seats js
+            JOIN journey_coaches jc ON jc.id = js.journey_coach_id
+            JOIN seats s ON s.id = js.seat_id
+            WHERE js.journey_id = j.id AND js.status = 'AVAILABLE' AND jc.is_available = TRUE
+              AND jc.reservation_type_snapshot = 'RESERVED' AND s.is_active = TRUE
+              AND (:coachClass IS NULL OR jc.coach_class_snapshot = CAST(:coachClass AS coach_class))
+              AND NOT EXISTS (SELECT 1 FROM active_seat_allocations asa
+                WHERE asa.journey_id = j.id AND asa.seat_id = js.seat_id
+                  AND asa.occupied_segment && int4range(ojs.sequence_number, djs.sequence_number, '[)')
+                  AND (asa.allocation_type = 'CONFIRMED' OR (asa.allocation_type = 'HELD' AND asa.expires_at > NOW())))) AS "availableSeatCount",
+          1 AS "searchMatch"
+        FROM journeys j
+        JOIN routes r ON r.id = j.route_id
+        JOIN trains t ON t.id = j.train_id
+        JOIN journey_stations ojs ON ojs.journey_id = j.id AND ojs.station_id = :originStationId
+        JOIN stations os ON os.id = ojs.station_id
+        JOIN journey_stations djs ON djs.journey_id = j.id AND djs.station_id = :destinationStationId
+        JOIN stations ds ON ds.id = djs.station_id
+        WHERE j.journey_date = :date AND j.status IN ('SCHEDULED', 'DELAYED', 'BOARDING')
+          AND ojs.sequence_number < djs.sequence_number AND ojs.can_board = TRUE AND djs.can_alight = TRUE
+          AND ojs.scheduled_departure_at > NOW()
+          AND (j.booking_opens_at IS NULL OR j.booking_opens_at <= NOW())
+          AND (j.booking_closes_at IS NULL OR j.booking_closes_at > NOW())
+      ) result
+      WHERE result."availableSeatCount" >= :passengerCount
+      ORDER BY result."originDepartureAt" ASC LIMIT :limit OFFSET :offset`,
+      { ...options, replacements: input, type: QueryTypes.SELECT }
+    );
+  }
+  countSearchResults(input, options = {}) {
+    return this.searchPublicJourneys(input, options).then((rows) =>
+      Number(rows[0]?.totalCount || 0)
+    );
+  }
+  findJourneyWithSegment(input, options = {}) {
+    return this.searchPublicJourneys(
+      {
+        ...input,
+        limit: 1,
+        offset: 0,
+        passengerCount: input.passengerCount || 1,
+        coachClass: input.coachClass || null,
+      },
+      options
+    ).then((rows) => rows[0] || null);
+  }
+  findByIdWithDetails(id, options = {}) {
+    return this.findSnapshot(id, options);
   }
 }
 module.exports = JourneyRepository;

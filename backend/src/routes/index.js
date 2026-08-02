@@ -11,6 +11,7 @@ const createAuthRouter = require('../modules/auth/auth.routes');
 const authenticateFactory = require('../common/middleware/authenticate.middleware');
 const { createSuperAdminRouter, createAdminUserRouter } = require('../modules/users/user.routes');
 const { createSuperAdminPaymentRouter } = require('../modules/payments/payment.routes');
+const { createRouteAdminRouter } = require('../modules/routes/route.routes');
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ const authenticate = authenticateFactory(services.authService);
 router.use('/passenger', authenticate, createPassengerRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminPaymentRouter(services));
+router.use('/super-admin/routes', authenticate, createRouteAdminRouter(services));
 router.use('/admin', authenticate, createAdminUserRouter(services));
 router.use('/admin', authenticate, createAdminRouter(services));
 
