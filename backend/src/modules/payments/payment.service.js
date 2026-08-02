@@ -9,6 +9,7 @@ const PAYMENT_STATUS = require('../../common/constants/payment-status.constants'
 const { toDecimal, formatAmount } = require('../../common/utils/money');
 const { generatePaymentReference } = require('../../common/utils/payment-reference');
 const paymentConfig = require('../../config/payment');
+const logger = require('../../config/logger');
 const TRANSITIONS = Object.freeze({
   PENDING: [
     'AWAITING_PAYMENT',
@@ -259,6 +260,11 @@ class PaymentService {
       transaction,
       metadata: { paymentId: payment.id },
     });
+    transaction.afterCommit?.(() =>
+      this.notificationService
+        ?.sendPaymentSuccess({ paymentId: payment.id })
+        .catch((error) => logger.error({ code: error.code }, 'Payment notification queue failed'))
+    );
     return { booking: confirmed, manualResolutionRequired: false };
   }
   async verifyStripePayment({ paymentId }) {

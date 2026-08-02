@@ -17,6 +17,7 @@ class Notification extends Model {
         id: id(),
         userId: { type: DataTypes.UUID },
         bookingId: { type: DataTypes.UUID },
+        journeyId: { type: DataTypes.UUID },
         channel: enumType(CHANNEL),
         destination: requiredString(255),
         templateCode: requiredString(100),
@@ -25,16 +26,25 @@ class Notification extends Model {
         status: enumType(STATUS, { defaultValue: STATUS.PENDING }),
         providerReference: string(150),
         failureMessage: { type: DataTypes.TEXT },
+        attemptCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+        maxAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 5 },
+        nextRetryAt: { type: DataTypes.DATE },
+        lastAttemptAt: { type: DataTypes.DATE },
+        providerName: string(100),
+        failureCode: string(100),
+        deduplicationKey: string(255, { unique: true }),
+        metadata: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
         scheduledAt: { type: DataTypes.DATE },
         sentAt: { type: DataTypes.DATE },
       },
-      modelOptions(sequelize, 'notifications', { timestamps: true, updatedAt: false })
+      modelOptions(sequelize, 'notifications', { timestamps: true })
     );
     return Notification;
   }
   static associate(models) {
     Notification.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
     Notification.belongsTo(models.Booking, { as: 'booking', foreignKey: 'bookingId' });
+    Notification.belongsTo(models.Journey, { as: 'journey', foreignKey: 'journeyId' });
   }
 }
 module.exports = Notification;

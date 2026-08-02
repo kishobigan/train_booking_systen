@@ -43,6 +43,7 @@ class Journey extends Model {
       foreignKey: 'journeyId',
     });
     Journey.hasMany(models.WaitlistEntry, { as: 'waitlistEntries', foreignKey: 'journeyId' });
+    Journey.hasMany(models.Notification, { as: 'notifications', foreignKey: 'journeyId' });
     Journey.hasMany(models.JourneyDisruption, { as: 'disruptions', foreignKey: 'journeyId' });
     Journey.belongsToMany(models.User, {
       as: 'assignedAdmins',

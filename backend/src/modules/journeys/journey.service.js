@@ -13,6 +13,7 @@ const JourneySeatRepository = require('./journey-seat.repository');
 const RouteRepository = require('../routes/route.repository');
 const TrainRepository = require('../trains/train.repository');
 const { normalizeJourneyInput } = require('./journey.dto');
+const logger = require('../../config/logger');
 
 class JourneyService {
   constructor({
@@ -23,6 +24,7 @@ class JourneyService {
     routeRepository = new RouteRepository(),
     trainRepository = new TrainRepository(),
     transactionProvider = sequelize,
+    notificationService,
   } = {}) {
     this.journeyRepository = journeyRepository;
     this.journeyStationRepository = journeyStationRepository;
@@ -31,6 +33,7 @@ class JourneyService {
     this.routeRepository = routeRepository;
     this.trainRepository = trainRepository;
     this.transactionProvider = transactionProvider;
+    this.notificationService = notificationService;
   }
 
   async createJourney(input, options = {}) {
@@ -194,6 +197,7 @@ class JourneyService {
       if ([JOURNEY_STATUS.CANCELLED, JOURNEY_STATUS.COMPLETED].includes(journey.status)) {
         throw new ConflictError('A closed journey cannot be delayed');
       }
+      const previousDepartureTime = journey.scheduledDepartureAt;
       const updates = {
         status: JOURNEY_STATUS.DELAYED,
         scheduledDepartureAt: this.#addMinutes(journey.scheduledDepartureAt, delayMinutes),
@@ -212,7 +216,21 @@ class JourneyService {
           transactionOptions
         );
       }
-      return journey.update(updates, transactionOptions);
+      const updated = await journey.update(updates, transactionOptions);
+      transactionOptions.transaction?.afterCommit?.(() =>
+        this.notificationService
+          ?.sendJourneyDelay({
+            journeyId: id,
+            delayEventId:
+              updated.updatedAt?.toISOString() || updated.scheduledDepartureAt.toISOString(),
+            previousDepartureTime,
+            updatedDepartureTime: updated.scheduledDepartureAt,
+            delayMinutes,
+            reason: options.reason,
+          })
+          .catch((error) => logger.error({ code: error.code }, 'Delay notification queue failed'))
+      );
+      return updated;
     });
   }
 

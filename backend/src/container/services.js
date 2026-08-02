@@ -37,6 +37,13 @@ const WaitlistService = require('../modules/waitlist/waitlist.service');
 const WaitlistOfferService = require('../modules/waitlist/waitlist-offer.service');
 const WaitlistPriorityService = require('../modules/waitlist/waitlist-priority.service');
 const waitlistConfig = require('../config/waitlist');
+const NotificationTemplateService = require('../modules/notifications/notification-template.service');
+const NotificationPreferenceService = require('../modules/notifications/notification-preference.service');
+const NotificationDispatcherService = require('../modules/notifications/notification-dispatcher.service');
+const EmailProvider = require('../modules/notifications/email.provider');
+const { MockSmsProvider } = require('../modules/notifications/sms.provider');
+const notificationConfig = require('../config/notification');
+const sequelize = require('../database/sequelize');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -55,7 +62,6 @@ const seatAvailabilityService = new SeatAvailabilityService({
   activeSeatAllocationRepository: repositories.activeSeatAllocationRepository,
 });
 const auditService = new AuditService(repositories.auditRepository);
-const notificationService = new NotificationService(repositories.notificationRepository);
 const transactionManager = new TransactionManager();
 const accessControlService = new AccessControlService({
   adminJourneyRepository: repositories.adminJourneyRepository,
@@ -63,6 +69,29 @@ const accessControlService = new AccessControlService({
   userRepository: repositories.userRepository,
   journeyRepository: repositories.journeyRepository,
   stationRepository: repositories.stationRepository,
+});
+const notificationTemplateService = new NotificationTemplateService();
+const notificationPreferenceService = new NotificationPreferenceService(sequelize);
+const emailProvider = new EmailProvider();
+const smsProvider = new MockSmsProvider();
+const notificationDispatcherService = new NotificationDispatcherService({
+  emailProvider,
+  smsProvider,
+});
+const notificationService = new NotificationService({
+  notificationRepository: repositories.notificationRepository,
+  notificationTemplateService,
+  notificationPreferenceService,
+  notificationDispatcherService,
+  userRepository: repositories.userRepository,
+  bookingRepository: repositories.bookingRepository,
+  journeyRepository: repositories.journeyRepository,
+  paymentRepository: repositories.paymentRepository,
+  waitlistRepository: repositories.waitlistRepository,
+  transactionManager,
+  auditService,
+  accessControlService,
+  config: notificationConfig,
 });
 const authService = new AuthService({
   userRepository: repositories.userRepository,
@@ -108,6 +137,11 @@ const bookingStatusService = new BookingStatusService({
   refundRepository: repositories.refundRepository,
   auditService,
   notificationService,
+  notificationTemplateService,
+  notificationPreferenceService,
+  notificationDispatcherService,
+  emailProvider,
+  smsProvider,
   transactionManager,
 });
 
@@ -137,6 +171,7 @@ const services = {
       journeySeatRepository: repositories.journeySeatRepository,
       routeRepository: repositories.routeRepository,
       trainRepository: repositories.trainRepository,
+      notificationService,
     }),
     fareCalculationService,
     seatAvailabilityService,
@@ -170,6 +205,7 @@ const services = {
     journeySeatRepository: repositories.journeySeatRepository,
     routeRepository: repositories.routeRepository,
     trainRepository: repositories.trainRepository,
+    notificationService,
   }),
 };
 
