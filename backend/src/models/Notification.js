@@ -30,6 +30,7 @@ class Notification extends Model {
         maxAttempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 5 },
         nextRetryAt: { type: DataTypes.DATE },
         lastAttemptAt: { type: DataTypes.DATE },
+        processingWorkerId: string(150),
         providerName: string(100),
         failureCode: string(100),
         deduplicationKey: string(255, { unique: true }),

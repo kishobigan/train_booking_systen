@@ -35,6 +35,13 @@ const repositoryClasses = {
   reconciliationRepository: require('../modules/payments/reconciliation.repository'),
   reportRepository: require('../modules/reports/report.repository'),
   seatMapRepository: require('../modules/seatmap/seatmap.repository'),
+  jobExecutionRepository: class JobExecutionRepositoryAdapter {
+    constructor() {
+      const Repository = require('../jobs/job-execution.repository');
+      const { JobExecution } = require('../models');
+      return new Repository({ JobExecution });
+    }
+  },
 };
 
 module.exports = Object.fromEntries(

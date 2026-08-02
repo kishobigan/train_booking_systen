@@ -1,33 +1,38 @@
 'use strict';
-
+const processRecords = require('./record-batch');
 class ExpireWaitlistOffersJob {
-  constructor({ waitlistService, waitlistRepository, transactionManager, logger = console }) {
-    Object.assign(this, { waitlistService, waitlistRepository, transactionManager, logger });
+  constructor({ waitlistRepository, waitlistService, config, logger = console }) {
+    Object.assign(this, { waitlistRepository, waitlistService, config, logger });
   }
-  async run({ limit = 50 } = {}) {
-    const ids = await this.transactionManager.execute(async (transaction) => {
-      const entries = await this.waitlistRepository.findExpiredOffersForUpdate(limit, transaction);
-      return entries.map((entry) => entry.id);
-    });
-    const results = [];
-    for (const waitlistEntryId of ids) {
-      try {
-        results.push(
-          await this.waitlistService.expireOffer({
+  async execute() {
+    const totals = { found: 0, processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+    while (totals.processed < this.config.maxPerRun) {
+      const limit = Math.min(this.config.batchSize, this.config.maxPerRun - totals.processed);
+      const ids = await this.waitlistRepository.findExpiredOfferIds({ limit });
+      if (!ids.length) break;
+      const result = await processRecords(
+        ids,
+        async (waitlistEntryId) => {
+          const entry = await this.waitlistService.expireOffer({
             waitlistEntryId,
-            actor: { role: 'SYSTEM' },
-            reason: 'Offer deadline elapsed.',
-          })
-        );
-      } catch (error) {
-        this.logger.error?.(
-          { waitlistEntryId, code: error.code, err: error },
-          'Failed to expire waitlist offer'
-        );
-      }
+            actor: { type: 'SYSTEM', role: 'SYSTEM', id: null },
+            reason: 'WAITLIST_OFFER_TIMEOUT',
+          });
+          return { skipped: entry?.status === 'OFFERED' };
+        },
+        {
+          maxFailures: this.config.maxRecordFailures,
+          logger: this.logger,
+          recordLabel: 'Waitlist offer',
+        }
+      );
+      merge(totals, result);
+      if (ids.length < limit) break;
     }
-    return { selected: ids.length, processed: results.length, results };
+    return totals;
   }
 }
-
+const merge = (target, value) => {
+  for (const key of Object.keys(target)) target[key] += value[key] || 0;
+};
 module.exports = ExpireWaitlistOffersJob;

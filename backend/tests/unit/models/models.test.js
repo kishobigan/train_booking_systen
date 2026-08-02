@@ -9,7 +9,7 @@ const { DataTypes } = require('sequelize');
 const models = require('../../../src/models');
 
 test('all migration-backed models load with the correct tables', () => {
-  assert.equal(Object.keys(models).length, 32);
+  assert.equal(Object.keys(models).length, 33);
   assert.equal(models.AdminJourney.tableName, 'admin_journeys');
   assert.equal(models.StaffStation.tableName, 'staff_stations');
   assert.equal(models.BankPaymentSlip.tableName, 'bank_payment_slips');
@@ -18,6 +18,7 @@ test('all migration-backed models load with the correct tables', () => {
   assert.equal(models.User.getTableName(), 'users');
   assert.equal(models.ActiveSeatAllocation.getTableName(), 'active_seat_allocations');
   assert.equal(models.JourneyDisruption.getTableName(), 'journey_disruptions');
+  assert.equal(models.JobExecution.getTableName(), 'job_executions');
 });
 
 test('model-owned associations expose the documented aliases and foreign keys', () => {

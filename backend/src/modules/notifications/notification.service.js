@@ -79,13 +79,16 @@ class NotificationService {
     return Promise.all(inputs.map((input) => this.queueNotification(input, options)));
   }
 
-  async sendNotification({ notificationId }) {
+  async sendNotification({ notificationId, workerId }) {
     const notification = await this.transactionManager.execute(async (transaction) => {
       const record = await this.notificationRepository.findByIdForUpdate(
         notificationId,
         transaction
       );
       if (!record) throw new NotFoundError('Notification not found');
+      if (record.status === STATUS.PROCESSING) {
+        return workerId && record.processingWorkerId === workerId ? record : null;
+      }
       if (![STATUS.PENDING, STATUS.RETRYING].includes(record.status)) return null;
       const dueAt = record.nextRetryAt || record.scheduledAt || record.createdAt;
       if (dueAt && dueAt > this.clock()) return null;
@@ -100,7 +103,7 @@ class NotificationService {
         );
         return null;
       }
-      await this.notificationRepository.claimForProcessing(record, { transaction });
+      await this.notificationRepository.claimForProcessing(record, { transaction, workerId });
       await this.#audit(record, 'NOTIFICATION_PROCESSING', { transaction });
       return record;
     });

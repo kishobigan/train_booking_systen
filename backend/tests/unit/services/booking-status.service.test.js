@@ -144,6 +144,7 @@ test('cancellation and expiry release allocations; successful refund is required
   });
   assert.equal(cancelled.effects.allocationDeletes, 1);
   const expired = fixture();
+  expired.booking.holdExpiresAt = new Date('2026-07-31T23:59:00Z');
   await expired.service.expireBooking({
     bookingId: 'booking-1',
     actor: system,

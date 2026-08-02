@@ -57,8 +57,10 @@ class NotificationRepository extends BaseRepository {
       'COALESCE("next_retry_at", "scheduled_at", "created_at") <= NOW()'
     );
     return this.model.findAll({
-      where: { status: { [Op.in]: statuses }, [Op.and]: due },
-      attributes: ['id'],
+      where: {
+        status: { [Op.in]: statuses },
+        [Op.and]: [due, this.model.sequelize.literal('"attempt_count" < "max_attempts"')],
+      },
       order: [['createdAt', 'ASC']],
       limit,
       transaction,
@@ -72,9 +74,18 @@ class NotificationRepository extends BaseRepository {
         status: STATUS.PROCESSING,
         lastAttemptAt: new Date(),
         attemptCount: Number(notification.attemptCount || 0) + 1,
+        processingWorkerId: options.workerId || null,
       },
       options
     );
+  }
+  async claimDueNotifications(
+    { limit, workerId, statuses = [STATUS.PENDING, STATUS.RETRYING] },
+    transaction
+  ) {
+    const records = await this.findDueNotifications(limit, transaction, statuses);
+    for (const record of records) await this.claimForProcessing(record, { transaction, workerId });
+    return records.map((record) => record.id);
   }
   markProcessing(notification, options = {}) {
     return this.claimForProcessing(notification, options);
@@ -89,6 +100,7 @@ class NotificationRepository extends BaseRepository {
         nextRetryAt: null,
         failureCode: null,
         failureMessage: null,
+        processingWorkerId: null,
       },
       options
     );
@@ -100,8 +112,23 @@ class NotificationRepository extends BaseRepository {
         failureCode: failure.code,
         failureMessage: failure.message,
         nextRetryAt,
+        processingWorkerId: null,
       },
       options
+    );
+  }
+  recoverStaleProcessing(cutoff, limit, transaction) {
+    return this.findStaleProcessingNotifications(cutoff, limit, transaction).then(
+      async (records) => {
+        for (const record of records)
+          await this.markRetrying(
+            record,
+            { code: 'WORKER_PROCESSING_TIMEOUT', message: 'Worker processing lease expired.' },
+            this.model.sequelize.fn('NOW'),
+            { transaction }
+          );
+        return records.map((record) => record.id);
+      }
     );
   }
   markFailed(notification, failure, options = {}) {
@@ -111,6 +138,7 @@ class NotificationRepository extends BaseRepository {
         failureCode: failure.code,
         failureMessage: failure.message,
         nextRetryAt: null,
+        processingWorkerId: null,
       },
       options
     );

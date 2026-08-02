@@ -116,6 +116,23 @@ class WaitlistRepository extends BaseRepository {
       skipLocked: true,
     });
   }
+  async findExpiredOfferIds({ limit }) {
+    const rows = await this.model.findAll({
+      where: {
+        status: WAITLIST_STATUS.OFFERED,
+        offerExpiresAt: { [Op.lte]: this.model.sequelize.fn('NOW') },
+      },
+      attributes: ['id'],
+      order: [['offerExpiresAt', 'ASC']],
+      limit,
+      raw: true,
+    });
+    return rows.map((row) => row.id);
+  }
+  async databaseNow(transaction) {
+    const [rows] = await this.model.sequelize.query('SELECT NOW() AS "now"', { transaction });
+    return new Date(rows[0].now);
+  }
   findExpiredOffers(referenceDate = new Date(), options = {}) {
     return this.findAll(
       { status: 'OFFERED', offerExpiresAt: { [Op.lte]: referenceDate } },

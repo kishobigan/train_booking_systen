@@ -1,23 +1,30 @@
 'use strict';
+const processRecords = require('./record-batch');
 class ReconcilePaymentsJob {
-  constructor(service, { batchSize = 50 } = {}) {
-    this.service = service;
-    this.batchSize = batchSize;
+  constructor({ paymentRepository, paymentReconciliationService, config, logger = console }) {
+    Object.assign(this, { paymentRepository, paymentReconciliationService, config, logger });
   }
-  async run() {
-    const payments = await this.service.findUnreconciledPayments({
-      limit: this.batchSize,
-      order: [['updated_at', 'ASC']],
+  async execute() {
+    const payments = await this.paymentRepository.findReconciliationCandidates({
+      limit: Math.min(this.config.batchSize, this.config.maxPerRun),
+      minAgeMinutes: this.config.minAgeMinutes,
+      maxAgeDays: this.config.maxAgeDays,
     });
-    const results = [];
-    for (const payment of payments) {
-      try {
-        results.push(await this.service.reconcilePayment({ payment }));
-      } catch (error) {
-        results.push({ paymentId: payment.id, error: error.code || error.name });
+    const byId = new Map(payments.map((payment) => [payment.id, payment]));
+    return processRecords(
+      [...byId.keys()],
+      (id) =>
+        this.paymentReconciliationService.reconcilePayment({
+          payment: byId.get(id),
+          actor: { type: 'SYSTEM', id: null },
+        }),
+      {
+        maxFailures: this.config.maxRecordFailures,
+        concurrency: this.config.concurrency,
+        logger: this.logger,
+        recordLabel: 'Payment reconciliation',
       }
-    }
-    return results;
+    );
   }
 }
 module.exports = ReconcilePaymentsJob;

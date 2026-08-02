@@ -254,8 +254,12 @@ class WaitlistService {
     return this.transactionManager.executeSerializable(async (transaction) => {
       const entry = await this.#locked(input.waitlistEntryId, transaction);
       if (entry.status !== WAITLIST_STATUS.OFFERED) return this.#entryResult(entry);
-      if (entry.offerExpiresAt > this.clock() && input.actor?.role !== 'SYSTEM')
-        throw new WaitlistError('The offer has not expired');
+      const now = this.waitlistRepository.databaseNow
+        ? await this.waitlistRepository.databaseNow(transaction)
+        : this.clock();
+      if (entry.offerExpiresAt > now && input.actor?.role === 'SYSTEM')
+        return this.#entryResult(entry);
+      if (entry.offerExpiresAt > now) throw new WaitlistError('The offer has not expired');
       const releasedSeatId = entry.offeredSeatId;
       await this.waitlistOfferService.releaseOffer(entry, transaction);
       if (this.config.requeueExpiredOffers)

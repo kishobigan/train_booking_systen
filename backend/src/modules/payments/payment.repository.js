@@ -89,5 +89,30 @@ class PaymentRepository extends BaseRepository {
       options
     );
   }
+  findReconciliationCandidates({ limit, minAgeMinutes, maxAgeDays }) {
+    return this.model.findAll({
+      where: {
+        providerName: { [Op.in]: ['STRIPE', 'MANUAL_BANK_TRANSFER'] },
+        status: {
+          [Op.in]: [
+            'PENDING',
+            'AWAITING_PAYMENT',
+            'AWAITING_VERIFICATION',
+            'PROCESSING',
+            'PAID',
+            'REFUND_PENDING',
+          ],
+        },
+        updatedAt: {
+          [Op.lte]: this.model.sequelize.literal(
+            `NOW() - INTERVAL '${Number(minAgeMinutes)} minutes'`
+          ),
+          [Op.gte]: this.model.sequelize.literal(`NOW() - INTERVAL '${Number(maxAgeDays)} days'`),
+        },
+      },
+      order: [['updatedAt', 'ASC']],
+      limit,
+    });
+  }
 }
 module.exports = PaymentRepository;

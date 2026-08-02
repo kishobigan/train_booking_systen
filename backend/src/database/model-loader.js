@@ -33,6 +33,7 @@ const modelClasses = [
   require('../models/Notification'),
   require('../models/AuditLog'),
   require('../models/JourneyDisruption'),
+  require('../models/JobExecution'),
 ];
 
 const loadedInstances = new WeakMap();

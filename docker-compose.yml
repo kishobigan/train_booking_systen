@@ -19,6 +19,7 @@ services:
 
   backend:
     build: ./backend
+    command: npm start
     container_name: train_booking_backend
     restart: unless-stopped
     ports:
@@ -30,6 +31,32 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build: ./backend
+    command: sh -c "npm run db:migrate && npm run db:seed"
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build: ./backend
+    command: npm run start:worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/train_booking
+      NODE_ENV: production
+      JOBS_ENABLED: "true"
+      JOB_HEALTH_PORT: 4051
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
   frontend:
     build:

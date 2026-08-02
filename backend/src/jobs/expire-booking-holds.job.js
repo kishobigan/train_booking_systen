@@ -1,32 +1,38 @@
 'use strict';
-const services = require('../container/services');
-const repositories = require('../container/repositories');
-const logger = require('../config/logger');
-
-async function expireBookingHolds({
-  bookingService = services.bookingService,
-  bookingRepository = repositories.bookingRepository,
-  transactionManager = services.transactionManager,
-  batchSize = 100,
-} = {}) {
-  const bookings = await transactionManager.execute((transaction) =>
-    bookingRepository.findForExpiryBatch(batchSize, transaction)
-  );
-  const results = [];
-  for (const booking of bookings) {
-    try {
-      await bookingService.expireBooking({
-        bookingId: booking.id,
-        actor: { type: 'SYSTEM', source: 'expire-booking-holds-job' },
-        reason: 'Booking hold expired before payment.',
-        metadata: { holdExpiresAt: booking.holdExpiresAt },
-      });
-      results.push({ bookingId: booking.id, expired: true });
-    } catch (error) {
-      logger.error({ err: error, bookingId: booking.id }, 'Failed to expire booking hold');
-      results.push({ bookingId: booking.id, expired: false, error });
-    }
+const processRecords = require('./record-batch');
+class ExpireBookingHoldsJob {
+  constructor({ bookingRepository, bookingService, config, logger = console }) {
+    Object.assign(this, { bookingRepository, bookingService, config, logger });
   }
-  return results;
+  async execute() {
+    const totals = { found: 0, processed: 0, succeeded: 0, failed: 0, skipped: 0 };
+    while (totals.processed < this.config.maxPerRun) {
+      const limit = Math.min(this.config.batchSize, this.config.maxPerRun - totals.processed);
+      const ids = await this.bookingRepository.findExpiredHeldBookingIds({ limit });
+      if (!ids.length) break;
+      const result = await processRecords(
+        ids,
+        async (bookingId) => {
+          const booking = await this.bookingService.expireBooking({
+            bookingId,
+            actor: { type: 'SYSTEM', id: null, source: 'BACKGROUND_JOB' },
+            reason: 'BOOKING_HOLD_TIMEOUT',
+          });
+          return { skipped: booking?.status && booking.status !== 'EXPIRED' };
+        },
+        {
+          maxFailures: this.config.maxRecordFailures,
+          logger: this.logger,
+          recordLabel: 'Booking hold',
+        }
+      );
+      merge(totals, result);
+      if (ids.length < limit) break;
+    }
+    return totals;
+  }
 }
-module.exports = expireBookingHolds;
+const merge = (target, value) => {
+  for (const key of Object.keys(target)) target[key] += value[key] || 0;
+};
+module.exports = ExpireBookingHoldsJob;

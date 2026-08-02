@@ -1,0 +1,8 @@
+'use strict';
+module.exports = Object.freeze({
+  STARTED: 'STARTED',
+  COMPLETED: 'COMPLETED',
+  COMPLETED_WITH_ERRORS: 'COMPLETED_WITH_ERRORS',
+  FAILED: 'FAILED',
+  SKIPPED_LOCKED: 'SKIPPED_LOCKED',
+});

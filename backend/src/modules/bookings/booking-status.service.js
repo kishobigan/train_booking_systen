@@ -52,6 +52,12 @@ class BookingStatusService {
         transaction
       );
       if (!booking) throw new NotFoundError('Booking not found');
+      if (
+        input.targetStatus === BOOKING_STATUS.EXPIRED &&
+        input.actor?.type === 'SYSTEM' &&
+        booking.status !== BOOKING_STATUS.HELD
+      )
+        return booking;
       const realtimeSeats = this.seatMapPublisher
         ? await this.bookingSeatRepository.findByBooking(booking.id, { transaction })
         : [];
@@ -168,12 +174,21 @@ class BookingStatusService {
     )
       throw new BookingStatusError('A transition reason is required');
     if (targetStatus === BOOKING_STATUS.CONFIRMED) {
-      if (booking.holdExpiresAt && booking.holdExpiresAt <= this.clock())
-        throw new BookingExpiredError();
+      const now = this.bookingRepository.databaseNow
+        ? await this.bookingRepository.databaseNow(transaction)
+        : this.clock();
+      if (booking.holdExpiresAt && booking.holdExpiresAt <= now) throw new BookingExpiredError();
       if (!(await this.paymentRepository.findSuccessfulByBooking(booking.id, { transaction })))
         throw new BookingStatusError('Successful payment is required before confirmation', {
           code: 'BOOKING_PAYMENT_REQUIRED',
         });
+    }
+    if (targetStatus === BOOKING_STATUS.EXPIRED) {
+      const now = this.bookingRepository.databaseNow
+        ? await this.bookingRepository.databaseNow(transaction)
+        : this.clock();
+      if (!booking.holdExpiresAt || booking.holdExpiresAt > now)
+        throw new BookingStatusError('Booking hold has not expired.');
     }
     if (
       targetStatus === BOOKING_STATUS.REFUNDED &&
