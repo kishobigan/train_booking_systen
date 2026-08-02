@@ -3,6 +3,8 @@
 const modelClasses = [
   require('../models/User'),
   require('../models/RefreshToken'),
+  require('../models/AdminJourney'),
+  require('../models/StaffStation'),
   require('../models/Station'),
   require('../models/Route'),
   require('../models/RouteStation'),

@@ -44,6 +44,12 @@ class Journey extends Model {
     });
     Journey.hasMany(models.WaitlistEntry, { as: 'waitlistEntries', foreignKey: 'journeyId' });
     Journey.hasMany(models.JourneyDisruption, { as: 'disruptions', foreignKey: 'journeyId' });
+    Journey.belongsToMany(models.User, {
+      as: 'assignedAdmins',
+      through: models.AdminJourney,
+      foreignKey: 'journeyId',
+      otherKey: 'adminUserId',
+    });
   }
   isBookableAt(date = new Date()) {
     return (

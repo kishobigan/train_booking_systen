@@ -36,6 +36,12 @@ class Station extends Model {
     Station.hasMany(models.Route, { as: 'endingRoutes', foreignKey: 'endStationId' });
     Station.hasMany(models.RouteStation, { as: 'routeStations', foreignKey: 'stationId' });
     Station.hasMany(models.JourneyStation, { as: 'journeyStations', foreignKey: 'stationId' });
+    Station.belongsToMany(models.User, {
+      as: 'assignedStaff',
+      through: models.StaffStation,
+      foreignKey: 'stationId',
+      otherKey: 'staffUserId',
+    });
   }
 }
 module.exports = Station;

@@ -21,6 +21,9 @@ const BookingSeatService = require('../modules/bookings/booking-seat.service');
 const AllocationService = require('../modules/bookings/allocation.service');
 const TransactionManager = require('../lib/transaction-manager');
 const fareConfig = require('../config/fare');
+const AccessControlService = require('../modules/access-control/access-control.service');
+const UserService = require('../modules/users/user.service');
+const AuthService = require('../modules/auth/auth.service');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -41,6 +44,26 @@ const seatAvailabilityService = new SeatAvailabilityService({
 const auditService = new AuditService(repositories.auditRepository);
 const notificationService = new NotificationService(repositories.notificationRepository);
 const transactionManager = new TransactionManager();
+const accessControlService = new AccessControlService({
+  adminJourneyRepository: repositories.adminJourneyRepository,
+  staffStationRepository: repositories.staffStationRepository,
+  userRepository: repositories.userRepository,
+  journeyRepository: repositories.journeyRepository,
+  stationRepository: repositories.stationRepository,
+});
+const authService = new AuthService({
+  userRepository: repositories.userRepository,
+  refreshTokenRepository: repositories.refreshTokenRepository,
+  auditService,
+  transactionManager,
+});
+const userService = new UserService({
+  userRepository: repositories.userRepository,
+  accessControlService,
+  refreshTokenRepository: repositories.refreshTokenRepository,
+  auditService,
+  transactionManager,
+});
 const bookingPassengerService = new BookingPassengerService({
   bookingPassengerRepository: repositories.bookingPassengerRepository,
   journeySeatRepository: repositories.journeySeatRepository,
@@ -49,6 +72,9 @@ const bookingPassengerService = new BookingPassengerService({
   allocationService: undefined,
   seatAvailabilityService,
   transactionManager,
+  authService,
+  userService,
+  accessControlService,
   maximumPassengers: fareConfig.maximumPassengersPerBooking,
 });
 const bookingSeatService = new BookingSeatService({

@@ -20,8 +20,18 @@ class UserRepository extends BaseRepository {
   }
   findForAuthentication(login, options = {}) {
     return this.model
+      .unscoped()
       .scope('withPassword')
       .findOne({ ...options, where: { [Op.or]: [{ email: login }, { phoneNumber: login }] } });
+  }
+  findByIdForAuthentication(id, options = {}) {
+    return this.model.unscoped().scope('withPassword').findByPk(id, options);
+  }
+  countActiveSuperAdmins(options = {}) {
+    return this.model.count({
+      ...options,
+      where: { role: 'SUPER_ADMIN', isActive: true, deletedAt: null },
+    });
   }
   findActive(where = {}, options = {}) {
     return this.model.scope('active').findAll({ ...options, where });

@@ -23,6 +23,12 @@ class User extends Model {
         emailVerifiedAt: { type: DataTypes.DATE },
         phoneVerifiedAt: { type: DataTypes.DATE },
         isActive: boolean(true),
+        mustChangePassword: boolean(true),
+        passwordChangedAt: { type: DataTypes.DATE },
+        temporaryPasswordExpiresAt: { type: DataTypes.DATE },
+        blockedAt: { type: DataTypes.DATE },
+        blockedByUserId: { type: DataTypes.UUID },
+        blockedReason: { type: DataTypes.TEXT },
       },
       modelOptions(sequelize, 'users', {
         timestamps: true,
@@ -45,6 +51,18 @@ class User extends Model {
     User.hasMany(models.BookingStatusHistory, {
       as: 'changedBookingStatuses',
       foreignKey: 'changedByUserId',
+    });
+    User.belongsToMany(models.Journey, {
+      as: 'adminJourneys',
+      through: models.AdminJourney,
+      foreignKey: 'adminUserId',
+      otherKey: 'journeyId',
+    });
+    User.belongsToMany(models.Station, {
+      as: 'staffStations',
+      through: models.StaffStation,
+      foreignKey: 'staffUserId',
+      otherKey: 'stationId',
     });
   }
   toJSON() {

@@ -4,6 +4,7 @@ const BookingController = require('../modules/bookings/booking.controller');
 const { createTimelineRouter } = require('../modules/availability/availability.routes');
 const AuthenticationError = require('../common/errors/AuthenticationError');
 const AuthorizationError = require('../common/errors/AuthorizationError');
+const requirePasswordChanged = require('../common/middleware/require-password-change.middleware');
 
 function requireAdmin(req, res, next) {
   void res;
@@ -17,6 +18,7 @@ function createAdminRouter(services) {
   const router = express.Router();
   const controller = new BookingController(services);
   router.use(requireAdmin);
+  router.use(requirePasswordChanged);
   router.patch('/bookings/:bookingId/status', controller.updateStatus);
   router.get('/journeys/:journeyId/bookings', controller.getJourneyBookings);
   router.post('/bookings/:bookingId/complete', controller.completeBooking);

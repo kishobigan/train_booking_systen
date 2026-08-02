@@ -7,6 +7,9 @@ const createFareRouter = require('../modules/fares/fare.routes');
 const createPublicRouter = require('./public.routes');
 const createPassengerRouter = require('./passenger.routes');
 const createAdminRouter = require('./admin.routes');
+const createAuthRouter = require('../modules/auth/auth.routes');
+const authenticateFactory = require('../common/middleware/authenticate.middleware');
+const { createSuperAdminRouter, createAdminUserRouter } = require('../modules/users/user.routes');
 
 const router = express.Router();
 
@@ -25,8 +28,12 @@ router.get('/health', async (req, res) => {
 });
 
 router.use('/fares', createFareRouter(services.fareCalculationService));
+router.use('/auth', createAuthRouter(services));
 router.use(createPublicRouter(services));
-router.use('/passenger', createPassengerRouter(services));
-router.use('/admin', createAdminRouter(services));
+const authenticate = authenticateFactory(services.authService);
+router.use('/passenger', authenticate, createPassengerRouter(services));
+router.use('/super-admin', authenticate, createSuperAdminRouter(services));
+router.use('/admin', authenticate, createAdminUserRouter(services));
+router.use('/admin', authenticate, createAdminRouter(services));
 
 module.exports = router;
