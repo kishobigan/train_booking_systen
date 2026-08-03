@@ -1,4 +1,145 @@
 'use client';
-import {zodResolver} from '@hookform/resolvers/zod'; import {useForm} from 'react-hook-form'; import {useRouter} from 'next/navigation'; import {ArrowLeftRight,Search} from 'lucide-react'; import {journeySearchSchema,JourneySearchValues} from '@/schemas/journey-search.schema'; import {useStationSearch} from '@/hooks/api/useStationSearch'; import {useJourneySearchStore} from '@/store/journey-search.store'; import {useNetworkStatus} from '@/hooks/useNetworkStatus';
-export function JourneySearchForm({variant='full',defaults}:{variant?:'hero'|'full'|'compact';defaults?:Partial<JourneySearchValues>}){const router=useRouter();const online=useNetworkStatus();const setRecent=useJourneySearchStore(s=>s.setRecent);const stations=useStationSearch('');const {register,handleSubmit,setValue,watch,formState:{errors}}=useForm<JourneySearchValues>({resolver:zodResolver(journeySearchSchema),defaultValues:{passengerCount:1,...defaults}});const swap=()=>{const a=watch('originStationId'),b=watch('destinationStationId');setValue('originStationId',b,{shouldValidate:true});setValue('destinationStationId',a,{shouldValidate:true})};const submit=handleSubmit(value=>{setRecent(value);const query=new URLSearchParams(Object.entries(value).filter(([,v])=>v!==undefined&&v!=='').map(([k,v])=>[k,String(v)]));router.push(`/journeys/results?${query}`)});return <form className={`journey-search search-${variant}`} onSubmit={submit} noValidate><StationSelect id="origin" label="From" error={errors.originStationId?.message} stations={stations.data||[]} disabled={stations.isLoading} registration={register('originStationId')}/><button className="swap-button" type="button" onClick={swap} aria-label="Swap origin and destination"><ArrowLeftRight size={18}/></button><StationSelect id="destination" label="To" error={errors.destinationStationId?.message} stations={stations.data||[]} disabled={stations.isLoading} registration={register('destinationStationId')}/><div className="field"><label htmlFor={`${variant}-date`}>Date</label><input className="input" id={`${variant}-date`} type="date" min={new Date().toISOString().slice(0,10)} {...register('date')}/>{errors.date&&<span className="field-error">{errors.date.message}</span>}</div><div className="field"><label htmlFor={`${variant}-passengers`}>Passengers</label><select className="input" id={`${variant}-passengers`} {...register('passengerCount')}>{[1,2,3,4,5,6].map(n=><option key={n}>{n}</option>)}</select></div><div className="field"><label htmlFor={`${variant}-class`}>Coach class</label><select className="input" id={`${variant}-class`} {...register('coachClass')}><option value="">Any class</option><option value="FIRST">First</option><option value="SECOND">Second</option><option value="THIRD">Third</option></select></div><button className="button search-submit" disabled={!online||stations.isLoading}><Search size={18}/>{online?'Search journeys':'Search unavailable offline'}</button>{stations.isError&&<div className="form-alert" role="alert">Stations could not be loaded. <button type="button" onClick={()=>stations.refetch()}>Retry</button></div>}</form>}
-function StationSelect({id,label,error,stations,registration,disabled}:{id:string;label:string;error?:string;stations:Array<{id:string;name:string;code:string}>;registration:any;disabled:boolean}){return <div className="field"><label htmlFor={id}>{label}</label><select className="input" id={id} disabled={disabled} {...registration}><option value="">{disabled?'Loading stations…':'Select station'}</option>{stations.map(s=><option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}</select>{error&&<span className="field-error">{error}</span>}</div>}
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+import { ArrowLeftRight, Search } from 'lucide-react';
+import { journeySearchSchema, JourneySearchValues } from '@/schemas/journey-search.schema';
+import { useStationSearch } from '@/hooks/api/useStationSearch';
+import { useJourneySearchStore } from '@/store/journey-search.store';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { COACH_CLASSES } from '@/constants/coach-classes';
+export function JourneySearchForm({
+  variant = 'full',
+  defaults,
+}: {
+  variant?: 'hero' | 'full' | 'compact';
+  defaults?: Partial<JourneySearchValues>;
+}) {
+  const router = useRouter();
+  const online = useNetworkStatus();
+  const setRecent = useJourneySearchStore((s) => s.setRecent);
+  const stations = useStationSearch('');
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<JourneySearchValues>({
+    resolver: zodResolver(journeySearchSchema),
+    defaultValues: { passengerCount: 1, ...defaults },
+  });
+  const swap = () => {
+    const a = watch('originStationId'),
+      b = watch('destinationStationId');
+    setValue('originStationId', b, { shouldValidate: true });
+    setValue('destinationStationId', a, { shouldValidate: true });
+  };
+  const submit = handleSubmit((value) => {
+    setRecent(value);
+    const query = new URLSearchParams(
+      Object.entries(value)
+        .filter(([, v]) => v !== undefined && v !== '')
+        .map(([k, v]) => [k, String(v)]),
+    );
+    router.push(`/journeys/results?${query}`);
+  });
+  return (
+    <form className={`journey-search search-${variant}`} onSubmit={submit} noValidate>
+      <StationSelect
+        id="origin"
+        label="From"
+        error={errors.originStationId?.message}
+        stations={stations.data || []}
+        disabled={stations.isLoading}
+        registration={register('originStationId')}
+      />
+      <button
+        className="swap-button"
+        type="button"
+        onClick={swap}
+        aria-label="Swap origin and destination"
+      >
+        <ArrowLeftRight size={18} />
+      </button>
+      <StationSelect
+        id="destination"
+        label="To"
+        error={errors.destinationStationId?.message}
+        stations={stations.data || []}
+        disabled={stations.isLoading}
+        registration={register('destinationStationId')}
+      />
+      <div className="field">
+        <label htmlFor={`${variant}-date`}>Date</label>
+        <input
+          className="input"
+          id={`${variant}-date`}
+          type="date"
+          min={new Date().toISOString().slice(0, 10)}
+          {...register('date')}
+        />
+        {errors.date && <span className="field-error">{errors.date.message}</span>}
+      </div>
+      <div className="field">
+        <label htmlFor={`${variant}-passengers`}>Passengers</label>
+        <select className="input" id={`${variant}-passengers`} {...register('passengerCount')}>
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <option key={n}>{n}</option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={`${variant}-class`}>Coach class</label>
+        <select className="input" id={`${variant}-class`} {...register('coachClass')}>
+          <option value="">Any class</option>
+          <option value={COACH_CLASSES.FIRST_CLASS}>First</option>
+          <option value={COACH_CLASSES.SECOND_CLASS}>Second</option>
+          <option value={COACH_CLASSES.THIRD_CLASS}>Third</option>
+        </select>
+      </div>
+      <button className="button search-submit" disabled={!online || stations.isLoading}>
+        <Search size={18} />
+        {online ? 'Search journeys' : 'Search unavailable offline'}
+      </button>
+      {stations.isError && (
+        <div className="form-alert" role="alert">
+          Stations could not be loaded.{' '}
+          <button type="button" onClick={() => stations.refetch()}>
+            Retry
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+function StationSelect({
+  id,
+  label,
+  error,
+  stations,
+  registration,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  stations: Array<{ id: string; name: string; code: string }>;
+  registration: any;
+  disabled: boolean;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <select className="input" id={id} disabled={disabled} {...registration}>
+        <option value="">{disabled ? 'Loading stations…' : 'Select station'}</option>
+        {stations.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name} ({s.code})
+          </option>
+        ))}
+      </select>
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
