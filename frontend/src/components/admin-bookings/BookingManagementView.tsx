@@ -1,1 +1,1 @@
-import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export function BookingManagementView(){return <ManagementPlaceholder title="Bookings" description="Select a journey to view its authorized booking list. The backend exposes journey-scoped booking lists but does not currently expose a general management booking-list endpoint."/>}
+export {BookingManagementListView as BookingManagementView} from '@/components/management/ResourceListViews';

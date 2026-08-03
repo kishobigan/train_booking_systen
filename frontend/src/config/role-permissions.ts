@@ -5,6 +5,9 @@ export const rolePermissions: Readonly<Record<InternalRole, readonly Permission[
   [ROLES.ADMIN]: [
     P.DASHBOARD_VIEW_JOURNEY,
     P.TRAIN_VIEW,
+    P.TRAIN_UPDATE,
+    P.TRAIN_MANAGE_COACHES,
+    P.TRAIN_MANAGE_SEATS,
     P.STATION_VIEW,
     P.ROUTE_VIEW,
     P.JOURNEY_VIEW,
@@ -35,7 +38,6 @@ export const rolePermissions: Readonly<Record<InternalRole, readonly Permission[
   ],
   [ROLES.STAFF]: [
     P.DASHBOARD_VIEW_STATION,
-    P.TRAIN_VIEW,
     P.STATION_VIEW,
     P.STATION_UPDATE,
     P.JOURNEY_VIEW,
@@ -43,6 +45,7 @@ export const rolePermissions: Readonly<Record<InternalRole, readonly Permission[
     P.BOOKING_CREATE,
     P.BOOKING_HISTORY_VIEW,
     P.ANALYTICS_VIEW,
+    P.REPORT_OCCUPANCY_VIEW,
   ],
 };
 export function permissionsFor(role?: string | null): readonly Permission[] {

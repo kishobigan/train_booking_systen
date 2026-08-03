@@ -6,11 +6,24 @@ class ReportRepository {
   constructor(database = sequelize) {
     this.database = database;
   }
+  findJourneyIdsByTrainIds(trainIds, options = {}) {
+    if (!trainIds.length) return Promise.resolve([]);
+    return this.query('SELECT id FROM journeys WHERE train_id = ANY(CAST(:trainIds AS UUID[]))', { trainIds }, options).then(rows => rows.map(row => row.id));
+  }
+  findJourneyIdsByStationIds(stationIds, options = {}) {
+    if (!stationIds.length) return Promise.resolve([]);
+    return this.query(
+      'SELECT DISTINCT journey_id AS id FROM journey_stations WHERE station_id = ANY(CAST(:stationIds AS UUID[]))',
+      { stationIds }, options
+    ).then(rows => rows.map(row => row.id));
+  }
 
   query(sql, replacements, options = {}) {
     const normalized = {
       ...replacements,
       journeyIds: this.#postgresUuidArray(replacements.journeyIds),
+      trainIds: this.#postgresUuidArray(replacements.trainIds),
+      stationIds: this.#postgresUuidArray(replacements.stationIds),
     };
     return this.database.query(sql, {
       ...options,

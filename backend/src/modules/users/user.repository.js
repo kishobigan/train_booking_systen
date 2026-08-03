@@ -1,10 +1,11 @@
 'use strict';
 const { Op } = require('sequelize');
 const BaseRepository = require('../../common/repositories/BaseRepository');
-const { User, Journey, Station } = require('../../models');
+const { User, Journey, Station, Train } = require('../../models');
 const assignmentIncludes = [
   { model: Journey, as: 'adminJourneys', attributes: ['id'], through: { attributes: [] }, required: false },
-  { model: Station, as: 'staffStations', attributes: ['id'], through: { attributes: [] }, required: false },
+  { model: Station, as: 'staffStations', attributes: ['id'], through: { attributes: [], where: { isActive: true } }, required: false },
+  { model: Train, as: 'adminTrains', attributes: ['id'], through: { attributes: [], where: { isActive: true } }, required: false },
 ];
 class UserRepository extends BaseRepository {
   constructor() {

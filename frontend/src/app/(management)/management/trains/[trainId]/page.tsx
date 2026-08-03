@@ -1,0 +1,1 @@
+import {ResourceDetail} from '@/components/management/ResourceForms'; export default async function Page({params}:{params:Promise<{trainId:string}>}){return <ResourceDetail resource="trains" id={(await params).trainId}/>}

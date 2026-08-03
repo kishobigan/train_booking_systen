@@ -10,6 +10,7 @@ class AccessControlService {
     userRepository,
     journeyRepository,
     stationRepository,
+    adminTrainAssignmentRepository,
   }) {
     Object.assign(this, {
       adminJourneyRepository,
@@ -17,6 +18,7 @@ class AccessControlService {
       userRepository,
       journeyRepository,
       stationRepository,
+      adminTrainAssignmentRepository,
     });
   }
   isSuperAdmin(actor) {
@@ -68,24 +70,22 @@ class AccessControlService {
     if (this.isSuperAdmin(actor)) return true;
     if (
       actor?.role !== ROLES.ADMIN ||
-      !(await this.adminJourneyRepository.findActive(adminUserId, journeyId, { transaction }))
+      !(await this.#adminHasJourneyTrain(adminUserId, journeyId, transaction))
     )
       throw new AuthorizationError('Journey is outside your assigned scope');
     return true;
   }
+  async #adminHasJourneyTrain(adminUserId, journeyId, transaction) {
+    const journey = await this.journeyRepository.findById(journeyId, { transaction, attributes: ['trainId'] });
+    return Boolean(journey && await this.adminTrainAssignmentRepository.isAdminAssignedToTrain(adminUserId, journey.trainId, { transaction }));
+  }
   async assignStaffToStation({ actor, staffUserId, stationId, transaction }) {
+    if (!this.isSuperAdmin(actor)) throw new AuthorizationError('Only a Super Admin can assign Staff stations');
     const staff = await this.userRepository.findById(staffUserId, { transaction });
     if (!staff || staff.role !== ROLES.STAFF)
       throw new InvalidRoleHierarchyError('Station assignments require a STAFF user');
     if (!(await this.stationRepository.findById(stationId, { transaction })))
       throw new NotFoundError('Station not found');
-    if (!this.isSuperAdmin(actor)) {
-      if (
-        actor?.role !== ROLES.ADMIN ||
-        !(await this.#adminCanAccessStation(actor.id, stationId, transaction))
-      )
-        throw new AuthorizationError('Station is outside your journey scope');
-    }
     await this.staffStationRepository.upsert(
       { staffUserId, stationId, assignedByUserId: actor.id },
       { transaction }
@@ -93,12 +93,7 @@ class AccessControlService {
     return this.staffStationRepository.findActive(staffUserId, stationId, { transaction });
   }
   async removeStaffFromStation({ actor, staffUserId, stationId, transaction }) {
-    if (
-      !this.isSuperAdmin(actor) &&
-      (actor?.role !== ROLES.ADMIN ||
-        !(await this.#adminCanAccessStation(actor.id, stationId, transaction)))
-    )
-      throw new AuthorizationError();
+    if (!this.isSuperAdmin(actor)) throw new AuthorizationError('Only a Super Admin can revoke Staff stations');
     return this.staffStationRepository.remove(staffUserId, stationId, { transaction });
   }
   getStaffStations(staffUserId, options = {}) {

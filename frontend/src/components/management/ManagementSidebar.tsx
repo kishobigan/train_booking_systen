@@ -5,16 +5,19 @@ import { usePathname } from 'next/navigation';
 import { TrainFront, X } from 'lucide-react';
 import { managementNavigation } from '@/config/management-navigation';
 import { usePermissions } from '@/hooks/usePermissions';
+import {useAuthStore} from '@/store/auth.store';
 
 export function ManagementSidebar({ open, close }: { open: boolean; close: () => void }) {
   const path = usePathname();
   const permissions = usePermissions();
+  const user=useAuthStore(s=>s.user);
   const items = managementNavigation.filter((item) =>
-    item.permission
+    !(user?.role==='ADMIN'&&['/management/stations','/management/routes','/management/audit'].includes(item.href)) &&
+    (item.permission
       ? permissions.hasPermission(item.permission)
       : item.anyOf
         ? permissions.hasAnyPermission(...item.anyOf)
-        : true,
+        : true),
   );
 
   return (

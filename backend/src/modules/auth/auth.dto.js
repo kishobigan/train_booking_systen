@@ -20,7 +20,13 @@ function toSafeUserDto(user) {
     mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt,
     assignedJourneyIds: (user.adminJourneys || []).map((journey) => journey.id),
+    assignedTrainIds: (user.adminTrains || []).map((train) => train.id),
     assignedStationIds: (user.staffStations || []).map((station) => station.id),
+    scope: {
+      assignedTrainIds: (user.adminTrains || []).map((train) => train.id),
+      assignedJourneyIds: (user.adminJourneys || []).map((journey) => journey.id),
+      assignedStationIds: (user.staffStations || []).map((station) => station.id),
+    },
   };
 }
 function toLoginResponseDto(result) {

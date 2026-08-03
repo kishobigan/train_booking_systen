@@ -9,7 +9,8 @@ const { DataTypes } = require('sequelize');
 const models = require('../../../src/models');
 
 test('all migration-backed models load with the correct tables', () => {
-  assert.equal(Object.keys(models).length, 33);
+  assert.equal(Object.keys(models).length, 34);
+  assert.equal(models.AdminTrainAssignment.tableName, 'admin_train_assignments');
   assert.equal(models.AdminJourney.tableName, 'admin_journeys');
   assert.equal(models.StaffStation.tableName, 'staff_stations');
   assert.equal(models.BankPaymentSlip.tableName, 'bank_payment_slips');

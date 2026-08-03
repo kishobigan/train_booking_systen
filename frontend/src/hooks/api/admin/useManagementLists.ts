@@ -1,1 +1,12 @@
-'use client'; import {useQuery} from '@tanstack/react-query'; import {queryKeys} from '@/constants/query-keys'; import {stationManagementService,routeManagementService} from '@/services/admin/management.service'; export const useManagementStations=(params:Record<string,unknown>={})=>useQuery({queryKey:queryKeys.stations.list(params),queryFn:stationManagementService.list}); export const useManagementRoutes=(params:Record<string,unknown>={})=>useQuery({queryKey:queryKeys.routes.list(params),queryFn:()=>routeManagementService.list(params)});
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { trainManagementService,stationManagementService,routeManagementService,journeyManagementService,bookingManagementService,paymentManagementService,waitlistManagementService,auditManagementService } from '@/services/admin/management.service';
+const useList=(key:string,service:{list:(params?:Record<string,unknown>)=>Promise<any>},params:Record<string,unknown>={})=>useQuery({queryKey:['management',key,params],queryFn:()=>service.list(params)});
+export const useManagementTrains=(p:Record<string,unknown>={})=>useList('trains',trainManagementService,p);
+export const useManagementStations=(p:Record<string,unknown>={})=>useList('stations',stationManagementService,p);
+export const useManagementRoutes=(p:Record<string,unknown>={})=>useList('routes',routeManagementService,p);
+export const useManagementJourneys=(p:Record<string,unknown>={})=>useList('journeys',journeyManagementService,p);
+export const useManagementBookings=(p:Record<string,unknown>={})=>useList('bookings',bookingManagementService,p);
+export const useManagementPayments=(p:Record<string,unknown>={})=>useList('payments',paymentManagementService,p);
+export const useManagementWaitlist=(p:Record<string,unknown>={})=>useList('waitlist',waitlistManagementService,p);
+export const useManagementAuditLogs=(p:Record<string,unknown>={})=>useList('audit-logs',auditManagementService,p);

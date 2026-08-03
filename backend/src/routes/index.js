@@ -13,6 +13,8 @@ const { createSuperAdminRouter, createAdminUserRouter } = require('../modules/us
 const { createSuperAdminPaymentRouter } = require('../modules/payments/payment.routes');
 const { createGuestPaymentRouter } = require('../modules/payments/payment.routes');
 const createResourceManagementRouter = require('./resource-management.routes');
+const createAdminTrainManagementRouter = require('./admin-train-management.routes');
+const createStaffStationManagementRouter = require('./staff-station-management.routes');
 const { createRouteAdminRouter } = require('../modules/routes/route.routes');
 const {
   createPublicBookingRouter,
@@ -51,5 +53,7 @@ router.use('/super-admin/routes', authenticate, createRouteAdminRouter(services)
 router.use('/super-admin', authenticate, createAdminRouter(services));
 router.use('/admin', authenticate, createAdminUserRouter(services));
 router.use('/admin', authenticate, createAdminRouter(services));
+router.use('/admin/manage', authenticate, createAdminTrainManagementRouter(services));
+router.use('/staff/manage', authenticate, createStaffStationManagementRouter(services));
 
 module.exports = router;

@@ -6,6 +6,7 @@ const AuthorizationError = require('../../../src/common/errors/AuthorizationErro
 const period = { dateFrom: new Date('2026-08-01'), dateTo: new Date('2026-08-31') };
 function service() {
   return new ReportService({
+    trainScopeAuthorizationService: { getAccessibleTrainIds: async () => ['t1'] },
     accessControlService: {
       getAdminJourneys: async () => [{ journeyId: 'j1' }],
       assertAdminJourneyAccess: async ({ journeyId }) => {
@@ -13,6 +14,7 @@ function service() {
       },
     },
     reportRepository: {
+      findJourneyIdsByTrainIds: async () => ['j1'],
       getBookingStatusCounts: async () => [{ status: 'CONFIRMED', count: 2 }],
       getPaymentStatusCounts: async () => [{ status: 'PAID', count: 2 }],
       getWaitlistStatusCounts: async () => [{ status: 'WAITING', count: 1 }],

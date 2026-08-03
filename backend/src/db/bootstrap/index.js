@@ -162,12 +162,16 @@ async function provisionFare(client, route, validFrom) {
   return fare;
 }
 
-async function provisionAssignments(client, admin, staff, journeys, colomboFort) {
+async function provisionAssignments(client, admin, staff, train, journeys, colomboFort) {
+  const assignedTrains = rows(await client.get(`/super-admin/manage/admins/${admin.id}/trains`));
+  if (!assignedTrains.some((item) => item.train?.id === train.id)) {
+    await client.post(`/super-admin/manage/admins/${admin.id}/trains`, { trainIds: [train.id] }, `bootstrap:assignment:admin-train:${admin.id}:${train.id}`);
+  }
   const assignedJourneys = rows(await client.get(`/super-admin/admins/${admin.id}/journeys`));
   const ids = new Set(assignedJourneys.map((item) => item.journeyId || item.journey?.id));
   for (const journey of journeys) if (!ids.has(journey.id)) await client.post(`/super-admin/admins/${admin.id}/journeys`, { journeyId: journey.id }, `bootstrap:assignment:admin:${admin.id}:${journey.id}`);
-  const stations = rows(await client.get(`/admin/staff/${staff.id}/stations`));
-  if (!stations.some((item) => (item.stationId || item.station?.id) === colomboFort.id)) await client.post(`/admin/staff/${staff.id}/stations`, { stationId: colomboFort.id }, `bootstrap:assignment:staff:${staff.id}:${colomboFort.id}`);
+  const stations = rows(await client.get(`/super-admin/manage/staff/${staff.id}/stations`));
+  if (!stations.some((item) => (item.stationId || item.station?.id) === colomboFort.id)) await client.post(`/super-admin/manage/staff/${staff.id}/stations`, { stationIds: [colomboFort.id] }, `bootstrap:assignment:staff:${staff.id}:${colomboFort.id}`);
 }
 
 async function verify(client, context) {
@@ -213,7 +217,7 @@ async function runBootstrap() {
     const journeys = await provisionJourneys(client, config, routes, train, timetable);
     await provisionFare(client, routes.outbound, journeys[0].journeyDate);
     await provisionFare(client, routes.reverse, journeys[2].journeyDate);
-    await provisionAssignments(client, admin, staff, journeys, stations[0]);
+    await provisionAssignments(client, admin, staff, train, journeys, stations[0]);
     const checks = await verify(client, { stations, routes, train, journeys });
     logger.info({ checks }, '[bootstrap] Interview environment is ready');
     return { stations, routes, train, journeys, checks };

@@ -28,6 +28,7 @@ const repositoryClasses = {
   auditRepository: require('../modules/audit/audit.repository'),
   refreshTokenRepository: require('../modules/auth/refresh-token.repository'),
   adminJourneyRepository: require('../modules/access-control/admin-journey.repository'),
+  adminTrainAssignmentRepository: require('../modules/access-control/admin-train-assignment.repository'),
   staffStationRepository: require('../modules/access-control/staff-station.repository'),
   paymentWebhookRepository: require('../modules/payments/payment-webhook.repository'),
   bankSlipRepository: require('../modules/payments/bank-slip.repository'),

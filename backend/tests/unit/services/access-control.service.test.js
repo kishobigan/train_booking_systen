@@ -26,6 +26,8 @@ function fixture() {
         return journeys.has(`${a}:${j}`) ? {} : null;
       },
     },
+    journeyRepository: { async findById(id) { return id === 'j-1' ? { trainId: 't-1' } : { trainId: 't-2' }; } },
+    adminTrainAssignmentRepository: { async isAdminAssignedToTrain(adminId, trainId) { return adminId === 'admin-1' && trainId === 't-1'; } },
     staffStationRepository: {
       async findActive(s, station) {
         return stations.has(`${s}:${station}`) ? {} : null;

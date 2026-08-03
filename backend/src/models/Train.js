@@ -23,6 +23,8 @@ class Train extends Model {
     return Train;
   }
   static associate(models) {
+    Train.hasMany(models.AdminTrainAssignment, { as: 'adminAssignments', foreignKey: 'trainId' });
+    Train.belongsToMany(models.User, { as: 'assignedAdmins', through: models.AdminTrainAssignment, foreignKey: 'trainId', otherKey: 'adminUserId' });
     Train.hasMany(models.Coach, { as: 'coaches', foreignKey: 'trainId' });
     Train.hasMany(models.Journey, { as: 'journeys', foreignKey: 'trainId' });
   }

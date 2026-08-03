@@ -22,6 +22,10 @@ const AllocationService = require('../modules/bookings/allocation.service');
 const TransactionManager = require('../lib/transaction-manager');
 const fareConfig = require('../config/fare');
 const AccessControlService = require('../modules/access-control/access-control.service');
+const AdminTrainAssignmentService = require('../modules/access-control/admin-train-assignment.service');
+const TrainScopeAuthorizationService = require('../modules/access-control/train-scope-authorization.service');
+const StaffStationAssignmentService = require('../modules/access-control/staff-station-assignment.service');
+const StationScopeAuthorizationService = require('../modules/access-control/station-scope-authorization.service');
 const UserService = require('../modules/users/user.service');
 const AuthService = require('../modules/auth/auth.service');
 const PaymentService = require('../modules/payments/payment.service');
@@ -79,7 +83,12 @@ const accessControlService = new AccessControlService({
   userRepository: repositories.userRepository,
   journeyRepository: repositories.journeyRepository,
   stationRepository: repositories.stationRepository,
+  adminTrainAssignmentRepository: repositories.adminTrainAssignmentRepository,
 });
+const trainScopeAuthorizationService = new TrainScopeAuthorizationService({ assignmentRepository: repositories.adminTrainAssignmentRepository });
+const adminTrainAssignmentService = new AdminTrainAssignmentService({ repository: repositories.adminTrainAssignmentRepository, userRepository: repositories.userRepository, trainRepository: repositories.trainRepository, auditService, transactionManager });
+const stationScopeAuthorizationService = new StationScopeAuthorizationService({ assignmentRepository: repositories.staffStationRepository });
+const staffStationAssignmentService = new StaffStationAssignmentService({ repository: repositories.staffStationRepository, userRepository: repositories.userRepository, stationRepository: repositories.stationRepository, auditService, transactionManager });
 const notificationTemplateService = new NotificationTemplateService();
 const notificationPreferenceService = new NotificationPreferenceService(sequelize);
 const emailProvider = new EmailProvider();
@@ -101,6 +110,10 @@ const notificationService = new NotificationService({
   transactionManager,
   auditService,
   accessControlService,
+  trainScopeAuthorizationService,
+  adminTrainAssignmentService,
+  stationScopeAuthorizationService,
+  staffStationAssignmentService,
   config: notificationConfig,
 });
 const authService = new AuthService({
@@ -169,6 +182,10 @@ const services = {
   authService,
   userService,
   accessControlService,
+  trainScopeAuthorizationService,
+  adminTrainAssignmentService,
+  stationScopeAuthorizationService,
+  staffStationAssignmentService,
   fareCalculationService,
   seatAvailabilityService,
   bookingStatusService,
@@ -340,6 +357,8 @@ Object.assign(services, {
   reportService: new ReportService({
     reportRepository: repositories.reportRepository,
     accessControlService,
+    trainScopeAuthorizationService,
+    stationScopeAuthorizationService,
   }),
   seatMapService: new SeatMapService({
     journeyRepository: repositories.journeyRepository,

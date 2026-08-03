@@ -43,6 +43,9 @@ class User extends Model {
     return User;
   }
   static associate(models) {
+    User.hasMany(models.AdminTrainAssignment, { as: 'adminTrainAssignments', foreignKey: 'adminUserId' });
+    User.hasMany(models.StaffStation, { as: 'staffStationAssignments', foreignKey: 'staffUserId' });
+    User.belongsToMany(models.Train, { as: 'adminTrains', through: models.AdminTrainAssignment, foreignKey: 'adminUserId', otherKey: 'trainId' });
     User.hasMany(models.RefreshToken, { as: 'refreshTokens', foreignKey: 'userId' });
     User.hasMany(models.Booking, { as: 'bookings', foreignKey: 'userId' });
     User.hasMany(models.WaitlistEntry, { as: 'waitlistEntries', foreignKey: 'userId' });

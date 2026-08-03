@@ -1,1 +1,1 @@
-import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default async function Page({params}:{params:Promise<{journeyId:string}>}){return <ManagementPlaceholder title="Journey operations" description={`Journey ${(await params).journeyId}: schedule, coaches, seats, booking controls, and alerts.`}/>}
+import {ResourceDetail} from '@/components/management/ResourceForms'; export default async function Page({params}:{params:Promise<{journeyId:string}>}){return <ResourceDetail resource="journeys" id={(await params).journeyId}/>}

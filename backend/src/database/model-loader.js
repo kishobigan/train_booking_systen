@@ -4,6 +4,7 @@ const modelClasses = [
   require('../models/User'),
   require('../models/RefreshToken'),
   require('../models/AdminJourney'),
+  require('../models/AdminTrainAssignment'),
   require('../models/StaffStation'),
   require('../models/Station'),
   require('../models/Route'),

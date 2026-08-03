@@ -3,22 +3,31 @@ const AuthorizationError = require('../../common/errors/AuthorizationError');
 const { decimal, subtract } = require('./report.dto');
 
 class ReportService {
-  constructor({ reportRepository, accessControlService }) {
+  constructor({ reportRepository, accessControlService, trainScopeAuthorizationService, stationScopeAuthorizationService }) {
     this.repository = reportRepository;
     this.accessControlService = accessControlService;
+    this.trainScopeAuthorizationService = trainScopeAuthorizationService;
+    this.stationScopeAuthorizationService = stationScopeAuthorizationService;
   }
 
   async resolveReportScope({ actor, journeyId, dateFrom, dateTo }) {
-    if (!['ADMIN', 'SUPER_ADMIN'].includes(actor?.role))
-      throw new AuthorizationError('Financial reports require administrator access');
+    if (!['STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(actor?.role))
+      throw new AuthorizationError('Operational reports require internal access');
     let journeyIds = [];
     if (actor.role === 'SUPER_ADMIN') {
       if (journeyId) journeyIds = [journeyId];
-    } else {
-      const assignments = await this.accessControlService.getAdminJourneys(actor.id);
-      journeyIds = assignments.map((item) => item.journeyId);
+    } else if (actor.role === 'ADMIN') {
+      const trainIds = await this.trainScopeAuthorizationService.getAccessibleTrainIds(actor);
+      journeyIds = await this.repository.findJourneyIdsByTrainIds(trainIds);
       if (journeyId) {
         await this.accessControlService.assertAdminJourneyAccess({ actor, journeyId });
+        journeyIds = [journeyId];
+      }
+    } else {
+      const stationIds = await this.stationScopeAuthorizationService.getAccessibleStationIds(actor);
+      journeyIds = await this.repository.findJourneyIdsByStationIds(stationIds);
+      if (journeyId) {
+        await this.stationScopeAuthorizationService.assertJourneyAccess(actor, journeyId);
         journeyIds = [journeyId];
       }
     }
@@ -27,7 +36,7 @@ class ReportService {
       journeyIds,
       dateFrom,
       dateToExclusive: new Date(dateTo.getTime() + 86400000),
-      scopeType: actor.role === 'SUPER_ADMIN' && !journeyId ? 'SYSTEM' : 'ASSIGNED_JOURNEYS',
+      scopeType: actor.role === 'SUPER_ADMIN' && !journeyId ? 'SYSTEM' : actor.role === 'STAFF' ? 'ASSIGNED_STATIONS' : 'ASSIGNED_TRAINS',
     };
   }
 
@@ -82,6 +91,8 @@ class ReportService {
   }
 
   async getRevenueReport(input) {
+    if (input.actor?.role === 'STAFF')
+      throw new AuthorizationError('Staff cannot access financial reports');
     const scope = await this.resolveReportScope(input);
     const [totals, byPaymentMethod, byJourney, trend] = await Promise.all([
       this.repository.getRevenueSummary(scope),

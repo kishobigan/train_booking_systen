@@ -1,0 +1,3 @@
+'use client';
+import {useAuthStore} from '@/store/auth.store';
+export function useTrainScope(){const user=useAuthStore(s=>s.user);const ids=user?.scope?.assignedTrainIds||user?.assignedTrainIds||[];const superAdmin=user?.role==='SUPER_ADMIN';const isAssignedTrain=(id:string)=>superAdmin||ids.includes(id);return {assignedTrainIds:ids,getAssignedTrainIds:()=>ids,isAssignedTrain,canAccessTrain:isAssignedTrain,canAccessJourney:()=>superAdmin||ids.length>0,canAccessBooking:()=>superAdmin||ids.length>0,canAccessPayment:()=>superAdmin||ids.length>0,canAccessWaitlist:()=>superAdmin||ids.length>0,canViewTrainReports:()=>superAdmin||ids.length>0};}

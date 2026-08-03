@@ -117,6 +117,8 @@ async function main() {
   const staff = await models.User.findOne({ where: { email: process.env.SEED_STAFF_EMAIL } });
   if ((await models.AdminJourney.count({ where: { adminUserId: admin.id, isActive: true } })) < 3)
     throw new Error('Admin journey assignments are incomplete');
+  if ((await models.AdminTrainAssignment.count({ where: { adminUserId: admin.id, trainId: train.id, isActive: true } })) !== 1)
+    throw new Error('Admin train assignment is missing');
   if ((await models.StaffStation.count({ where: { staffUserId: staff.id, stationId: origin.stationId, isActive: true } })) !== 1)
     throw new Error('Staff Colombo Fort assignment is missing');
 

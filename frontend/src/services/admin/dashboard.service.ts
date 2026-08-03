@@ -1,1 +1,7 @@
-import {apiClient} from '@/services/http/api-client'; import {unwrap} from '@/services/http/api-response'; export type AdminMode='admin'|'super-admin'; export const dashboardService={getSummary:async(mode:AdminMode,params?:Record<string,unknown>)=>unwrap<Record<string,any>>((await apiClient.get(`/${mode}/dashboard`,{params})).data)};
+import { apiClient } from '@/services/http/api-client';
+import { unwrap } from '@/services/http/api-response';
+export type AdminMode = 'admin' | 'super-admin' | 'staff';
+export const dashboardService = {
+  getSummary: async (mode: AdminMode, params?: Record<string, unknown>) =>
+    unwrap<Record<string, any>>((await apiClient.get(`/${mode}/dashboard`, { params })).data),
+};

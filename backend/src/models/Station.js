@@ -32,6 +32,7 @@ class Station extends Model {
     return Station;
   }
   static associate(models) {
+    Station.hasMany(models.StaffStation, { as: 'staffAssignments', foreignKey: 'stationId' });
     Station.hasMany(models.Route, { as: 'startingRoutes', foreignKey: 'startStationId' });
     Station.hasMany(models.Route, { as: 'endingRoutes', foreignKey: 'endStationId' });
     Station.hasMany(models.RouteStation, { as: 'routeStations', foreignKey: 'stationId' });

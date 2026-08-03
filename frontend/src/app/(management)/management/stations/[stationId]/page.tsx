@@ -1,1 +1,1 @@
-import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default async function Page({params}:{params:Promise<{stationId:string}>}){return <ManagementPlaceholder title="Station details" description={`Operational details for station ${(await params).stationId}.`}/>}
+import {ResourceDetail} from '@/components/management/ResourceForms'; export default async function Page({params}:{params:Promise<{stationId:string}>}){return <ResourceDetail resource="stations" id={(await params).stationId}/>}

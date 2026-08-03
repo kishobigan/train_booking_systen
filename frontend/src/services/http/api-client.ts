@@ -38,6 +38,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetryConfig | undefined;
+    const responseCode = (error.response?.data as { error?: { code?: string } } | undefined)?.error?.code;
+    if (responseCode === 'USER_BLOCKED') {
+      authTokenStore.clear();
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('auth:expired'));
+      throw normalizeApiError(error);
+    }
     const excluded = [
       '/auth/login',
       '/auth/refresh',

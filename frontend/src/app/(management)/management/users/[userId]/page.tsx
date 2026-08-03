@@ -1,1 +1,1 @@
-import {ManagementPlaceholder} from '@/components/management/ManagementPlaceholder'; export default async function Page({params}:{params:Promise<{userId:string}>}){return <ManagementPlaceholder title="User details" description={`User ${(await params).userId}, status and assignments.`}/>}
+import {AdminTrainAssignments} from '@/components/users/AdminTrainAssignments'; export default async function Page({params}:{params:Promise<{userId:string}>}){return <AdminTrainAssignments adminId={(await params).userId}/>}
