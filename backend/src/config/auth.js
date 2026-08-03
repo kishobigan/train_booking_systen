@@ -6,6 +6,10 @@ const refreshSecret = required(
   'REFRESH_TOKEN_SECRET',
   required('JWT_REFRESH_SECRET', accessSecret)
 );
+const secureCookie =
+  process.env.AUTH_COOKIE_SECURE === undefined
+    ? process.env.NODE_ENV === 'production'
+    : process.env.AUTH_COOKIE_SECURE === 'true';
 module.exports = Object.freeze({
   jwtSecret: accessSecret,
   accessSecret,
@@ -20,7 +24,7 @@ module.exports = Object.freeze({
   cookie: Object.freeze({
     name: process.env.REFRESH_TOKEN_COOKIE_NAME || 'refresh_token',
     httpOnly: true,
-    secure: process.env.AUTH_COOKIE_SECURE === 'true' || process.env.NODE_ENV === 'production',
+    secure: secureCookie,
     sameSite: process.env.AUTH_COOKIE_SAME_SITE || 'strict',
     path: '/api/v1/auth',
   }),
