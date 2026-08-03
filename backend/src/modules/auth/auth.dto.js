@@ -19,6 +19,8 @@ function toSafeUserDto(user) {
     isActive: user.isActive,
     mustChangePassword: user.mustChangePassword,
     createdAt: user.createdAt,
+    assignedJourneyIds: (user.adminJourneys || []).map((journey) => journey.id),
+    assignedStationIds: (user.staffStations || []).map((station) => station.id),
   };
 }
 function toLoginResponseDto(result) {

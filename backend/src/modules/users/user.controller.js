@@ -4,8 +4,8 @@ const apiResponse = require('../../common/utils/api-response');
 const { createUserDto, updateUserDto } = require('./user.dto');
 const { validateCreate } = require('./user.validator');
 class UserController {
-  constructor({ userService, accessControlService }) {
-    Object.assign(this, { userService, accessControlService });
+  constructor({ userService, accessControlService, auditService }) {
+    Object.assign(this, { userService, accessControlService, auditService });
   }
   createUser = asyncHandler(async (req, res) =>
     res.status(201).json(
@@ -93,17 +93,21 @@ class UserController {
       )
     )
   );
-  assignJourney = asyncHandler(async (req, res) =>
-    res.status(201).json(
-      apiResponse.success(
-        await this.accessControlService.assignAdminToJourney({
-          actor: req.user,
-          adminUserId: req.params.adminId,
-          journeyId: req.body.journeyId,
-        })
-      )
-    )
-  );
+  assignJourney = asyncHandler(async (req, res) => {
+    const assignment = await this.accessControlService.assignAdminToJourney({
+      actor: req.user,
+      adminUserId: req.params.adminId,
+      journeyId: req.body.journeyId,
+    });
+    await this.auditService?.record({
+      userId: req.user.id,
+      action: 'ADMIN_JOURNEY_ASSIGNED',
+      entityType: 'AdminJourney',
+      entityId: assignment.id,
+      newValues: { adminUserId: req.params.adminId, journeyId: req.body.journeyId },
+    });
+    return res.status(201).json(apiResponse.success(assignment));
+  });
   listJourneys = asyncHandler(async (req, res) =>
     res.json(
       apiResponse.success(await this.accessControlService.getAdminJourneys(req.params.adminId))
@@ -120,17 +124,21 @@ class UserController {
       )
     )
   );
-  assignStation = asyncHandler(async (req, res) =>
-    res.status(201).json(
-      apiResponse.success(
-        await this.accessControlService.assignStaffToStation({
-          actor: req.user,
-          staffUserId: req.params.staffId,
-          stationId: req.body.stationId,
-        })
-      )
-    )
-  );
+  assignStation = asyncHandler(async (req, res) => {
+    const assignment = await this.accessControlService.assignStaffToStation({
+      actor: req.user,
+      staffUserId: req.params.staffId,
+      stationId: req.body.stationId,
+    });
+    await this.auditService?.record({
+      userId: req.user.id,
+      action: 'STAFF_STATION_ASSIGNED',
+      entityType: 'StaffStation',
+      entityId: assignment.id,
+      newValues: { staffUserId: req.params.staffId, stationId: req.body.stationId },
+    });
+    return res.status(201).json(apiResponse.success(assignment));
+  });
   listStations = asyncHandler(async (req, res) =>
     res.json(
       apiResponse.success(await this.accessControlService.getStaffStations(req.params.staffId))

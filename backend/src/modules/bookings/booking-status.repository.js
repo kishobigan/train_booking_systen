@@ -8,7 +8,9 @@ class BookingStatusRepository extends BaseRepository {
   findBookingForUpdate(bookingRepository, bookingId, transaction) {
     return bookingRepository.findById(bookingId, {
       transaction,
-      lock: transaction.LOCK.UPDATE,
+      // Lock only the booking row. PostgreSQL rejects an unrestricted FOR
+      // UPDATE when the query also contains the optional journey outer join.
+      lock: { level: transaction.LOCK.UPDATE, of: bookingRepository.model },
       include: [{ model: Journey, as: 'journey' }],
     });
   }

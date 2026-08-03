@@ -10,6 +10,22 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 let refreshPromise: Promise<string> | null = null;
+export function refreshAccessToken() {
+  refreshPromise ??= axios
+    .post(`${env.apiBaseUrl}/auth/refresh`, {}, { withCredentials: true, timeout: 15_000 })
+    .then((response) => {
+      const token = response.data.data.accessToken as string;
+      authTokenStore.setAccessToken(token);
+      return token;
+    })
+    .catch((error) => {
+      throw normalizeApiError(error);
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+  return refreshPromise;
+}
 
 apiClient.interceptors.request.use((config) => {
   const token = authTokenStore.getAccessToken();
@@ -22,9 +38,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetryConfig | undefined;
-    const excluded = ['/auth/login', '/auth/refresh', '/auth/logout'].some((path) =>
-      original?.url?.includes(path),
-    );
+    const excluded = [
+      '/auth/login',
+      '/auth/refresh',
+      '/auth/logout',
+      '/auth/change-initial-password',
+    ].some((path) => original?.url?.includes(path));
     const accessToken = authTokenStore.getAccessToken();
     if (
       error.response?.status === 401 &&
@@ -35,17 +54,7 @@ apiClient.interceptors.response.use(
     ) {
       original._retried = true;
       try {
-        refreshPromise ??= axios
-          .post(`${env.apiBaseUrl}/auth/refresh`, {}, { withCredentials: true })
-          .then((response) => {
-            const token = response.data.data.accessToken as string;
-            authTokenStore.setAccessToken(token);
-            return token;
-          })
-          .finally(() => {
-            refreshPromise = null;
-          });
-        original.headers.Authorization = `Bearer ${await refreshPromise}`;
+        original.headers.Authorization = `Bearer ${await refreshAccessToken()}`;
         return apiClient(original);
       } catch {
         authTokenStore.clear();

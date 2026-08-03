@@ -11,6 +11,10 @@ function bookingHoldDto(input = {}) {
           identityType: passenger.identityType,
           identityNumber: passenger.identityNumber,
           dateOfBirth: passenger.dateOfBirth,
+          passengerNumber: passenger.passengerNumber,
+          identityCountry: passenger.identityCountry,
+          guardianPassengerNumber: passenger.guardianPassengerNumber,
+          guardianRelationship: passenger.guardianRelationship,
           journeySeatId: passenger.journeySeatId,
         }))
       : input.passengers,

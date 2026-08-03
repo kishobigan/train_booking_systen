@@ -73,6 +73,8 @@ class AuthService {
   validateAuthenticatedUser(user) {
     if (!user || user.deletedAt) throw new AuthenticationError();
     if (!user.isActive || user.blockedAt) throw new UserBlockedError();
+    if (!['SUPER_ADMIN', 'ADMIN', 'STAFF'].includes(user.role))
+      throw new AuthenticationError('This login is restricted to internal staff');
     return user;
   }
   async issueTokenPair(user, options = {}) {

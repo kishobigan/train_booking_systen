@@ -24,13 +24,23 @@ export function BookingPageView() {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      passengers: seats.map((id) => ({ fullName: '', passengerType: 'ADULT', journeySeatId: id })),
+      passengers: seats.map((id, index) => ({
+        passengerNumber: index + 1,
+        fullName: '',
+        passengerType: 'ADULT' as const,
+        identityType: 'NIC' as const,
+        identityNumber: '',
+        identityCountry: 'LKA',
+        dateOfBirth: '',
+        journeySeatId: id,
+      })),
       contact: { fullName: '', email: '', phone: '' },
       policyAccepted: false as true,
     },
   });
   const fields = useFieldArray({ control: form.control, name: 'passengers' });
-  const types = form.watch('passengers').map((p) => ({ passengerType: p.passengerType }));
+  const watchedPassengers = form.watch('passengers');
+  const types = watchedPassengers.map((p) => ({ passengerType: p.passengerType }));
   const fareInput =
     draft.journeyId &&
     draft.originJourneyStationId &&
@@ -65,7 +75,7 @@ export function BookingPageView() {
         },
       });
       resetSeats();
-      router.push(`/booking/${result.id}/payment`);
+      router.push(`/booking/${result.bookingId}/payment`);
     } catch (error) {
       if ((error as any)?.code === 'SEAT_UNAVAILABLE')
         router.push(
@@ -95,22 +105,89 @@ export function BookingPageView() {
                     <option value="ADULT">Adult</option>
                     <option value="CHILD">Child</option>
                     <option value="SENIOR">Senior</option>
-                    <option value="INFANT">Infant</option>
+                    <option value="STUDENT">Student</option>
+                    <option value="DISABLED">Disabled</option>
                   </select>
                 </div>
                 <div className="field">
-                  <label>Identity type (optional)</label>
-                  <input className="input" {...form.register(`passengers.${index}.identityType`)} />
+                  <label>Identity type</label>
+                  <select className="input" {...form.register(`passengers.${index}.identityType`)}>
+                    <option value="NIC">Sri Lankan NIC</option>
+                    <option value="PASSPORT">Passport</option>
+                    <option value="DEPENDENT">Dependent (no own ID)</option>
+                  </select>
                 </div>
                 <div className="field">
-                  <label>Identity number (optional)</label>
+                  <label>Date of birth</label>
                   <input
                     className="input"
-                    autoComplete="off"
-                    {...form.register(`passengers.${index}.identityNumber`)}
+                    type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                    {...form.register(`passengers.${index}.dateOfBirth`)}
+                  />
+                  <ErrorText
+                    value={form.formState.errors.passengers?.[index]?.dateOfBirth?.message}
                   />
                 </div>
+                {watchedPassengers[index]?.identityType !== 'DEPENDENT' ? (
+                  <>
+                    <div className="field">
+                      <label>
+                        {watchedPassengers[index]?.identityType === 'PASSPORT'
+                          ? 'Passport number'
+                          : 'NIC number'}
+                      </label>
+                      <input
+                        className="input"
+                        autoComplete="off"
+                        {...form.register(`passengers.${index}.identityNumber`)}
+                      />
+                      <ErrorText
+                        value={form.formState.errors.passengers?.[index]?.identityNumber?.message}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="field">
+                      <label>Responsible guardian</label>
+                      <select
+                        className="input"
+                        {...form.register(`passengers.${index}.guardianPassengerNumber`, {
+                          valueAsNumber: true,
+                        })}
+                      >
+                        <option value="">Select guardian</option>
+                        {watchedPassengers.map((passenger, guardianIndex) =>
+                          guardianIndex !== index && passenger.identityType !== 'DEPENDENT' ? (
+                            <option key={guardianIndex} value={guardianIndex + 1}>
+                              Passenger {guardianIndex + 1}: {passenger.fullName || 'Unnamed'}
+                            </option>
+                          ) : null,
+                        )}
+                      </select>
+                      <ErrorText
+                        value={
+                          form.formState.errors.passengers?.[index]?.guardianPassengerNumber
+                            ?.message
+                        }
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Relationship</label>
+                      <input
+                        className="input"
+                        placeholder="Child, ward…"
+                        {...form.register(`passengers.${index}.guardianRelationship`)}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
+              <input
+                type="hidden"
+                {...form.register(`passengers.${index}.passengerNumber`, { valueAsNumber: true })}
+              />
               <input type="hidden" {...form.register(`passengers.${index}.journeySeatId`)} />
             </Card>
           ))}

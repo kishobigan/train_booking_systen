@@ -10,6 +10,7 @@ const {
   BookingSeat,
   Seat,
   Payment,
+  BookingStatusHistory,
 } = require('../../models');
 class BookingRepository extends BaseRepository {
   constructor() {
@@ -98,6 +99,7 @@ class BookingRepository extends BaseRepository {
         { model: BookingPassenger, as: 'passengers' },
         { model: BookingSeat, as: 'bookingSeats', include: [{ model: Seat, as: 'seat' }] },
         { model: Payment, as: 'payments' },
+        { model: BookingStatusHistory, as: 'statusHistory' },
       ],
     });
   }

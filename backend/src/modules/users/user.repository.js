@@ -1,7 +1,11 @@
 'use strict';
 const { Op } = require('sequelize');
 const BaseRepository = require('../../common/repositories/BaseRepository');
-const { User } = require('../../models');
+const { User, Journey, Station } = require('../../models');
+const assignmentIncludes = [
+  { model: Journey, as: 'adminJourneys', attributes: ['id'], through: { attributes: [] }, required: false },
+  { model: Station, as: 'staffStations', attributes: ['id'], through: { attributes: [] }, required: false },
+];
 class UserRepository extends BaseRepository {
   constructor() {
     super(User);
@@ -22,10 +26,11 @@ class UserRepository extends BaseRepository {
     return this.model
       .unscoped()
       .scope('withPassword')
-      .findOne({ ...options, where: { [Op.or]: [{ email: login }, { phoneNumber: login }] } });
+      .findOne({ ...options, include: assignmentIncludes, where: { [Op.or]: [{ email: login }, { phoneNumber: login }] } });
   }
   findByIdForAuthentication(id, options = {}) {
-    return this.model.unscoped().scope('withPassword').findByPk(id, options);
+    const include = options.include ?? (options.lock ? [] : assignmentIncludes);
+    return this.model.unscoped().scope('withPassword').findByPk(id, { ...options, include });
   }
   countActiveSuperAdmins(options = {}) {
     return this.model.count({

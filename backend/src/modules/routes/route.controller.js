@@ -89,5 +89,12 @@ class RouteController {
     );
     res.json(apiResponse.success(result));
   });
+  cloneReverse = asyncHandler(async (req, res) => {
+    const route = await this.service.cloneReverseRoute(
+      validator.id(req.params.routeId),
+      req.body || {},
+    );
+    res.status(201).json(apiResponse.success(details(route)));
+  });
 }
 module.exports = RouteController;

@@ -50,6 +50,10 @@ const jwtService = require('../lib/jwt');
 const SeatMapService = require('../modules/seatmap/seatmap.service');
 const JourneySeatService = require('../modules/journeys/journey-seat.service');
 const JourneyCoachService = require('../modules/journeys/journey-coach.service');
+const PassengerIdentityService = require('../modules/bookings/passenger-identity.service');
+const GuestBookingAccessService = require('../modules/bookings/guest-booking-access.service');
+const passengerIdentityConfig = require('../config/passenger-identity');
+const guestBookingConfig = require('../config/guest-booking');
 
 const fareCalculationService = new FareCalculationService({
   journeyRepository: repositories.journeyRepository,
@@ -114,6 +118,11 @@ const userService = new UserService({
   auditService,
   transactionManager,
 });
+const passengerIdentityService = new PassengerIdentityService(passengerIdentityConfig);
+const guestBookingAccessService = new GuestBookingAccessService({
+  bookingRepository: repositories.bookingRepository,
+  config: guestBookingConfig,
+});
 const bookingPassengerService = new BookingPassengerService({
   bookingPassengerRepository: repositories.bookingPassengerRepository,
   journeySeatRepository: repositories.journeySeatRepository,
@@ -126,6 +135,8 @@ const bookingPassengerService = new BookingPassengerService({
   userService,
   accessControlService,
   maximumPassengers: fareConfig.maximumPassengersPerBooking,
+  passengerIdentityService,
+  nicRequiredAge: passengerIdentityConfig.nicRequiredAge,
 });
 const bookingSeatService = new BookingSeatService({
   bookingSeatRepository: repositories.bookingSeatRepository,
@@ -157,6 +168,7 @@ const bookingStatusService = new BookingStatusService({
 const services = {
   authService,
   userService,
+  accessControlService,
   fareCalculationService,
   seatAvailabilityService,
   bookingStatusService,
@@ -166,6 +178,9 @@ const services = {
   bookingPassengerService,
   bookingSeatService,
   allocationService,
+  passengerIdentityService,
+  guestBookingAccessService,
+  guestBookingConfig,
   fareRuleService: new FareRuleService(repositories.fareRuleRepository),
   fareRuleClassService: new FareRuleClassService(repositories.fareRuleClassRepository),
   passengerFareRuleService: new PassengerFareRuleService(repositories.passengerFareRuleRepository),
@@ -193,6 +208,7 @@ const services = {
     auditService,
     accessControlService,
     maximumPassengers: fareConfig.maximumPassengersPerBooking,
+    guestBookingAccessService,
   }),
   stationService: new StationService(repositories.stationRepository),
   routeService: new RouteService({

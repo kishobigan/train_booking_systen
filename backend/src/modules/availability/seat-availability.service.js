@@ -290,6 +290,10 @@ class SeatAvailabilityService {
     const seats = await this.availabilityRepository.findSeatsWithCoach(input.journeySeatIds, {
       transaction: input.transaction,
       lock: input.transaction.LOCK?.UPDATE,
+      // PostgreSQL cannot apply FOR UPDATE to nullable outer-join rows. Lock the
+      // journey_seats themselves; availability metadata is loaded by the
+      // subsequent segment check inside this same transaction.
+      include: [],
     });
     if (seats.length !== input.journeySeatIds.length) {
       throw new NotFoundError('One or more journey seats were not found');

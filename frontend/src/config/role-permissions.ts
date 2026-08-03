@@ -1,7 +1,50 @@
-import {PERMISSIONS as P,Permission} from '@/constants/permissions'; import {ROLES,InternalRole} from '@/constants/roles';
-export const rolePermissions:Readonly<Record<InternalRole,readonly Permission[]>>={
- [ROLES.SUPER_ADMIN]:Object.values(P),
- [ROLES.ADMIN]:[P.DASHBOARD_VIEW_JOURNEY,P.STATION_VIEW,P.ROUTE_VIEW,P.JOURNEY_VIEW,P.JOURNEY_UPDATE,P.JOURNEY_CANCEL,P.JOURNEY_DELAY,P.JOURNEY_MANAGE_BOOKING,P.JOURNEY_MANAGE_COACHES,P.JOURNEY_MANAGE_SEATS,P.BOOKING_VIEW,P.BOOKING_CANCEL,P.BOOKING_COMPLETE,P.PAYMENT_VIEW,P.PAYMENT_VERIFY_BANK_SLIP,P.REFUND_VIEW,P.USER_VIEW,P.USER_CREATE_STAFF,P.USER_BLOCK,P.USER_UNBLOCK,P.USER_RESET_PASSWORD,P.USER_ASSIGN_STATION,P.REPORT_REVENUE_VIEW,P.REPORT_OCCUPANCY_VIEW],
- [ROLES.STAFF]:[P.DASHBOARD_VIEW_STATION,P.STATION_VIEW,P.JOURNEY_VIEW,P.BOOKING_VIEW],
+import { PERMISSIONS as P, Permission } from '@/constants/permissions';
+import { ROLES, InternalRole } from '@/constants/roles';
+export const rolePermissions: Readonly<Record<InternalRole, readonly Permission[]>> = {
+  [ROLES.SUPER_ADMIN]: Object.values(P),
+  [ROLES.ADMIN]: [
+    P.DASHBOARD_VIEW_JOURNEY,
+    P.TRAIN_VIEW,
+    P.STATION_VIEW,
+    P.ROUTE_VIEW,
+    P.JOURNEY_VIEW,
+    P.JOURNEY_CREATE,
+    P.JOURNEY_UPDATE,
+    P.JOURNEY_CANCEL,
+    P.JOURNEY_DELAY,
+    P.JOURNEY_MANAGE_BOOKING,
+    P.JOURNEY_MANAGE_COACHES,
+    P.JOURNEY_MANAGE_SEATS,
+    P.BOOKING_VIEW,
+    P.BOOKING_CREATE,
+    P.BOOKING_CANCEL,
+    P.BOOKING_HISTORY_VIEW,
+    P.PAYMENT_VIEW,
+    P.PAYMENT_VERIFY_BANK_SLIP,
+    P.REFUND_VIEW,
+    P.WAITLIST_VIEW,
+    P.ANALYTICS_VIEW,
+    P.USER_VIEW,
+    P.USER_CREATE_STAFF,
+    P.USER_BLOCK,
+    P.USER_UNBLOCK,
+    P.USER_RESET_PASSWORD,
+    P.USER_ASSIGN_STATION,
+    P.REPORT_REVENUE_VIEW,
+    P.REPORT_OCCUPANCY_VIEW,
+  ],
+  [ROLES.STAFF]: [
+    P.DASHBOARD_VIEW_STATION,
+    P.TRAIN_VIEW,
+    P.STATION_VIEW,
+    P.STATION_UPDATE,
+    P.JOURNEY_VIEW,
+    P.BOOKING_VIEW,
+    P.BOOKING_CREATE,
+    P.BOOKING_HISTORY_VIEW,
+    P.ANALYTICS_VIEW,
+  ],
 };
-export function permissionsFor(role?:string|null):readonly Permission[]{return role&&role in rolePermissions?rolePermissions[role as InternalRole]:[]}
+export function permissionsFor(role?: string | null): readonly Permission[] {
+  return role && role in rolePermissions ? rolePermissions[role as InternalRole] : [];
+}

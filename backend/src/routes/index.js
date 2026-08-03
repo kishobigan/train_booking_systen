@@ -11,7 +11,13 @@ const createAuthRouter = require('../modules/auth/auth.routes');
 const authenticateFactory = require('../common/middleware/authenticate.middleware');
 const { createSuperAdminRouter, createAdminUserRouter } = require('../modules/users/user.routes');
 const { createSuperAdminPaymentRouter } = require('../modules/payments/payment.routes');
+const { createGuestPaymentRouter } = require('../modules/payments/payment.routes');
+const createResourceManagementRouter = require('./resource-management.routes');
 const { createRouteAdminRouter } = require('../modules/routes/route.routes');
+const {
+  createPublicBookingRouter,
+  createGuestBookingRouter,
+} = require('../modules/bookings/guest-booking.routes');
 
 const router = express.Router();
 
@@ -32,10 +38,14 @@ router.get('/health', async (req, res) => {
 router.use('/fares', createFareRouter(services.fareCalculationService));
 router.use('/auth', createAuthRouter(services));
 router.use(createPublicRouter(services));
+router.use(createPublicBookingRouter(services));
+router.use(createGuestBookingRouter(services));
+router.use(createGuestPaymentRouter(services));
 const authenticate = authenticateFactory(services.authService);
 router.use('/passenger', authenticate, createPassengerRouter(services));
 router.use(authenticate, createPassengerRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminRouter(services));
+router.use('/super-admin/manage', authenticate, createResourceManagementRouter(services));
 router.use('/super-admin', authenticate, createSuperAdminPaymentRouter(services));
 router.use('/super-admin/routes', authenticate, createRouteAdminRouter(services));
 router.use('/super-admin', authenticate, createAdminRouter(services));

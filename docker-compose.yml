@@ -33,9 +33,9 @@ services:
       postgres:
         condition: service_healthy
 
-  seed:
+  bootstrap-super-admin:
     build: *backend-build
-    command: npm run db:seed
+    command: npm run bootstrap:super-admin
     restart: "no"
     env_file:
       - ./backend/.env.example
@@ -62,7 +62,7 @@ services:
       PORT: 4050
       JOBS_ENABLED: "false"
     depends_on:
-      seed:
+      bootstrap-super-admin:
         condition: service_completed_successfully
     healthcheck:
       test:
@@ -77,6 +77,20 @@ services:
       retries: 10
       start_period: 10s
 
+  bootstrap:
+    build: *backend-build
+    command: npm run db:bootstrap
+    restart: "no"
+    env_file:
+      - ./backend/.env.example
+    environment:
+      <<: *backend-environment
+      ALLOW_DATABASE_SEED: "true"
+      BOOTSTRAP_API_BASE_URL: http://backend:4050/api/v1
+    depends_on:
+      backend:
+        condition: service_healthy
+
   worker:
     build: *backend-build
     command: npm run start:worker
@@ -90,8 +104,8 @@ services:
     volumes:
       - bank_slips:/app/storage/bank-slips
     depends_on:
-      backend:
-        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -120,8 +134,8 @@ services:
       PORT: 3050
       HOSTNAME: "0.0.0.0"
     depends_on:
-      backend:
-        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [

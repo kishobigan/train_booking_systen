@@ -16,6 +16,7 @@ class PaymentController {
             method: req.body.method,
             userId: req.user.id,
             role: req.user.role,
+            guestBookingId: req.user.guestBookingId,
             idempotencyKey: req.get('Idempotency-Key'),
           })
         )
@@ -60,6 +61,7 @@ class PaymentController {
           paymentId: req.params.paymentId,
           userId: req.user.id,
           role: req.user.role,
+          guestBookingId: req.user.guestBookingId,
           file: req.file,
           ...req.body,
         })

@@ -15,7 +15,7 @@ Build, initialize, verify, and start the complete application:
 docker compose up --build
 ```
 
-Compose waits for PostgreSQL, runs pending migrations and the idempotent development seed, starts the API and worker, starts the frontend after API readiness, and finally runs a one-shot smoke verification. Migration or seed failures prevent dependent services from starting.
+Compose waits for PostgreSQL, runs pending migrations, directly creates only the initial Super Admin, starts the API, and then provisions all remaining demonstration records through authenticated Super Admin APIs. The worker and frontend start only after bootstrap succeeds, followed by one-shot smoke verification.
 
 Open the frontend using the configured frontend URL. The backend API and WebSocket URLs are defined by the existing frontend environment configuration. Seed credentials are defined by the `SEED_*` variables in [backend/.env.example](backend/.env.example); passwords are never printed by startup or verification.
 
@@ -67,3 +67,19 @@ Optional Stripe, email, SMS, Redis-backed WebSocket, and bank-payment integratio
 ## Local development without full Compose
 
 Install the Node.js version selected by the Dockerfiles, copy the relevant environment examples to local environment files, and use the existing package scripts in `backend/package.json` and `frontend/package.json`.
+
+## Interview Demonstration
+
+Credentials are configured with `SEED_SUPER_ADMIN_*`, `SEED_ADMIN_*`, and `SEED_STAFF_*` environment variables. Startup logs never print passwords or access tokens.
+
+The bootstrap creates 79 ordered Colombo Fort–Badulla stations, direction-correct outbound and return routes, one configurable train with three reserved and five unreserved coaches, 120 reserved seats, two outbound journeys, one return journey, fare rules, and role assignments. Journey dates are calculated relative to startup and stable service numbers prevent duplicate records.
+
+Demonstration flow:
+
+1. Search Colombo Fort to Badulla on the public landing page and open a seeded journey.
+2. Inspect segment-specific availability, choose reserved seats, request a distance-based fare, and create a guest booking.
+3. Sign in as Super Admin to inspect the complete network, users, audit trail, revenue, and occupancy.
+4. Sign in as Admin to inspect the three assigned journeys.
+5. Sign in as Staff to inspect the Colombo Fort station scope.
+
+Seat allocations use half-open station intervals: `[originSequence, destinationSequence)`. Adjacent bookings may therefore reuse one physical seat at their shared station, while PostgreSQL overlap protection rejects intersecting allocations. Journey station, coach, and seat snapshots preserve historical configuration. Availability changes are published through Socket.IO, and expired holds and waitlist offers are processed by the worker.

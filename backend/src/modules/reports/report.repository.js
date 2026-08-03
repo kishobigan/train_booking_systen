@@ -8,7 +8,20 @@ class ReportRepository {
   }
 
   query(sql, replacements, options = {}) {
-    return this.database.query(sql, { ...options, replacements, type: QueryTypes.SELECT });
+    const normalized = {
+      ...replacements,
+      journeyIds: this.#postgresUuidArray(replacements.journeyIds),
+    };
+    return this.database.query(sql, {
+      ...options,
+      replacements: normalized,
+      type: QueryTypes.SELECT,
+    });
+  }
+
+  #postgresUuidArray(values) {
+    if (!Array.isArray(values)) return values;
+    return `{${values.join(',')}}`;
   }
 
   getBookingStatusCounts(scope, options = {}) {

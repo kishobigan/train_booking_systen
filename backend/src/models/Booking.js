@@ -20,6 +20,9 @@ class Booking extends Model {
         id: id(),
         bookingReference: requiredString(30, { unique: true }),
         userId: { type: DataTypes.UUID },
+        createdByUserId: { type: DataTypes.UUID },
+        guestAccessTokenHash: string(64),
+        guestAccessTokenExpiresAt: { type: DataTypes.DATE },
         journeyId: foreignKey(),
         originJourneyStationId: foreignKey(),
         destinationJourneyStationId: foreignKey(),
@@ -57,6 +60,7 @@ class Booking extends Model {
 
   static associate(models) {
     Booking.belongsTo(models.User, { as: 'user', foreignKey: 'userId' });
+    Booking.belongsTo(models.User, { as: 'createdByUser', foreignKey: 'createdByUserId' });
     Booking.belongsTo(models.Journey, { as: 'journey', foreignKey: 'journeyId' });
     Booking.belongsTo(models.JourneyStation, {
       as: 'originJourneyStation',
@@ -88,6 +92,11 @@ class Booking extends Model {
 
   isHoldExpired(date = new Date()) {
     return this.isHeld() && this.holdExpiresAt && this.holdExpiresAt <= date;
+  }
+  toJSON() {
+    const values = { ...this.get() };
+    delete values.guestAccessTokenHash;
+    return values;
   }
 }
 

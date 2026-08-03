@@ -7,6 +7,7 @@ class BookingController {
   constructor({ bookingService, bookingStatusService }) {
     this.bookingService = bookingService;
     this.bookingStatusService = bookingStatusService;
+    this.guestBookingConfig = require('../../config/guest-booking');
   }
   createHold = asyncHandler(async (req, res) => {
     const input = validateHold(
@@ -17,6 +18,36 @@ class BookingController {
     );
     const result = await this.bookingService.createBookingHold({ userId: req.user.id, ...input });
     res.status(201).json(apiResponse.success(result));
+  });
+  createGuestHold = asyncHandler(async (req, res) => {
+    const input = validateHold(bookingHoldDto(req.body));
+    const result = await this.bookingService.createBookingHold(input);
+    const token = result.guestAccessToken;
+    delete result.guestAccessToken;
+    res.cookie(`${this.guestBookingConfig.cookieName}_${result.bookingId}`, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/v1/guest',
+      expires: result.guestAccessTokenExpiresAt,
+    });
+    res.status(201).json(apiResponse.success(result));
+  });
+  getGuestById = asyncHandler(async (req, res) => res.json(apiResponse.success(req.guestBooking)));
+  getGuestHistory = asyncHandler(async (req, res) =>
+    res.json(apiResponse.success(req.guestBooking.statusHistory || []))
+  );
+  getGuestTicket = asyncHandler(async (req, res) =>
+    res.json(apiResponse.success(await this.bookingService.getBookingTicket(req.guestBooking.id)))
+  );
+  cancelGuestBooking = asyncHandler(async (req, res) => {
+    const result = await this.bookingService.cancelBooking({
+      bookingId: req.guestBooking.id,
+      requestingUser: { guestBookingId: req.guestBooking.id },
+      reason: req.body.reason,
+      actor: { type: 'GUEST', userId: null },
+    });
+    res.json(apiResponse.success(result));
   });
   confirm = asyncHandler(async (req, res) => {
     const input = validateConfirmation({

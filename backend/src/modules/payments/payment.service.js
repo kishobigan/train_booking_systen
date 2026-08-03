@@ -116,7 +116,7 @@ class PaymentService {
   async #createInternal(input) {
     return this.transactionManager.executeSerializable(async (transaction) => {
       const idempotencyRecord = await this.idempotencyService.begin({
-        scope: `payment:create:${input.userId}`,
+        scope: `payment:create:${input.userId || input.guestBookingId}`,
         key: input.idempotencyKey,
         request: { bookingId: input.bookingId, method: input.method },
         transaction,
@@ -125,7 +125,11 @@ class PaymentService {
         return { replayed: true, response: idempotencyRecord.responseBody };
       const booking = await this.bookingRepository.findByIdForUpdate(input.bookingId, transaction);
       if (!booking) throw new NotFoundError('Booking not found');
-      await this.verifyPaymentOwnership(booking, { id: input.userId, role: input.role });
+      await this.verifyPaymentOwnership(booking, {
+        id: input.userId,
+        role: input.role,
+        guestBookingId: input.guestBookingId,
+      });
       this.#validateBooking(booking);
       if (await this.paymentRepository.findSuccessfulByBookingId(booking.id, { transaction }))
         throw new PaymentAlreadyProcessedError();
@@ -157,6 +161,7 @@ class PaymentService {
     });
   }
   verifyPaymentOwnership(booking, user) {
+    if (user?.guestBookingId === booking.id) return true;
     if (user?.role === 'SUPER_ADMIN' || booking.userId === user?.id) return true;
     if (user?.role === 'ADMIN')
       return this.accessControlService.assertAdminJourneyAccess({

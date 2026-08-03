@@ -9,6 +9,24 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: config.slip.maxBytes, files: 1 },
 });
+function createGuestPaymentRouter(services) {
+  const router = express.Router();
+  const payment = new PaymentController(services);
+  const guestAuthFactory = require('../bookings/guest-booking.middleware');
+  const bookingAuth = guestAuthFactory(services);
+  const paymentAuth = guestAuthFactory.forPayment(services);
+  router.post('/guest/bookings/:bookingId/payments', bookingAuth, payment.create);
+  router.get('/guest/payments/:paymentId', paymentAuth, payment.get);
+  router.get('/guest/payments/:paymentId/status', paymentAuth, payment.status);
+  router.post('/guest/payments/:paymentId/verify', paymentAuth, payment.verify);
+  router.post(
+    '/guest/payments/:paymentId/bank-slip',
+    paymentAuth,
+    upload.single('file'),
+    payment.uploadSlip
+  );
+  return router;
+}
 function createPassengerPaymentRouter(services) {
   const router = express.Router();
   const payment = new PaymentController(services);
@@ -61,6 +79,7 @@ function stripeWebhookHandler(services) {
 }
 module.exports = {
   createPassengerPaymentRouter,
+  createGuestPaymentRouter,
   createAdminPaymentRouter,
   createSuperAdminPaymentRouter,
   stripeWebhookHandler,

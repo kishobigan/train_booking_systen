@@ -14,7 +14,7 @@ class BankPaymentSlip extends Model {
       {
         id: id(),
         paymentId: foreignKey(),
-        uploadedByUserId: foreignKey(),
+        uploadedByUserId: { type: DataTypes.UUID },
         originalFileName: string(255),
         storedFileName: string(255),
         storageProvider: requiredString(50),

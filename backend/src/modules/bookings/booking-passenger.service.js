@@ -2,6 +2,7 @@
 const PASSENGER_TYPE = require('../../common/constants/passenger-type.constants');
 const NotFoundError = require('../../common/errors/NotFoundError');
 const ValidationError = require('../../common/errors/ValidationError');
+const IDENTITY_TYPE = require('../../common/constants/passenger-identity-type.constants');
 class BookingPassengerService {
   constructor({
     bookingPassengerRepository,
@@ -12,6 +13,8 @@ class BookingPassengerService {
     seatAvailabilityService,
     transactionManager,
     maximumPassengers = 6,
+    passengerIdentityService,
+    nicRequiredAge = 16,
   }) {
     this.repository = bookingPassengerRepository;
     this.journeySeatRepository = journeySeatRepository;
@@ -21,6 +24,8 @@ class BookingPassengerService {
     this.seatAvailabilityService = seatAvailabilityService;
     this.transactionManager = transactionManager;
     this.maximumPassengers = maximumPassengers;
+    this.passengerIdentityService = passengerIdentityService;
+    this.nicRequiredAge = nicRequiredAge;
   }
   /** Create one passenger using server-calculated fare values. */
   createPassenger({ bookingId, passenger, fareBreakdown, assignedSeatId, transaction }) {
@@ -31,16 +36,45 @@ class BookingPassengerService {
     );
   }
   /** Bulk-create ordered passengers and match each server fare entry. */
-  bulkCreatePassengers({ bookingId, passengers, fareBreakdown, assignedSeatIds, transaction }) {
-    this.validatePassengerList(passengers);
+  bulkCreatePassengers({
+    bookingId,
+    passengers,
+    fareBreakdown,
+    assignedSeatIds,
+    transaction,
+    requireIdentity = false,
+  }) {
+    this.validatePassengerList(passengers, { requireIdentity });
     if (fareBreakdown.passengers.length !== passengers.length)
       throw new ValidationError('Passenger and fare counts do not match');
-    return this.repository.bulkCreate(
-      passengers.map((passenger, index) =>
-        this.#values(bookingId, passenger, fareBreakdown.passengers[index], assignedSeatIds[index])
-      ),
-      { transaction, returning: true }
-    );
+    return this.repository
+      .bulkCreate(
+        passengers.map((passenger, index) =>
+          this.#values(
+            bookingId,
+            passenger,
+            fareBreakdown.passengers[index],
+            assignedSeatIds[index]
+          )
+        ),
+        { transaction, returning: true }
+      )
+      .then(async (created) => {
+        const byNumber = new Map(
+          created.map((passenger) => [passenger.passengerNumber, passenger])
+        );
+        await Promise.all(
+          created.map((record, index) => {
+            const guardianNumber = passengers[index].guardianPassengerNumber;
+            if (!guardianNumber) return null;
+            return record.update(
+              { guardianPassengerId: byNumber.get(guardianNumber).id },
+              { transaction }
+            );
+          })
+        );
+        return created;
+      });
   }
   /** Get one booking passenger. */
   async getPassengerById(id, options = {}) {
@@ -195,12 +229,13 @@ class BookingPassengerService {
     return passenger;
   }
   /** Validate a passenger list and selected-seat uniqueness. */
-  validatePassengerList(passengers) {
+  validatePassengerList(passengers, { requireIdentity = false } = {}) {
     this.validatePassengerCount(passengers?.length);
     passengers.forEach((passenger) => this.validatePassenger(passenger));
     const ids = passengers.map((passenger) => passenger.journeySeatId).filter(Boolean);
     if (new Set(ids).size !== ids.length)
       throw new ValidationError('Duplicate journey seats are not allowed');
+    if (requireIdentity) this.#validateIdentities(passengers);
     return passengers;
   }
   /** Validate configured booking passenger count. */
@@ -210,18 +245,75 @@ class BookingPassengerService {
     return count;
   }
   #values(bookingId, passenger, fare, assignedSeatId) {
+    const identity =
+      this.passengerIdentityService && passenger.identityType
+        ? this.passengerIdentityService.prepare(passenger)
+        : { identityNumber: passenger.identityNumber };
     return {
       bookingId,
+      passengerNumber: passenger.passengerNumber,
       fullName: passenger.fullName.trim(),
       passengerType: passenger.passengerType,
       identityType: passenger.identityType,
-      identityNumber: passenger.identityNumber,
+      ...identity,
+      identityCountry:
+        passenger.identityCountry || (passenger.identityType === 'NIC' ? 'LKA' : null),
+      guardianRelationship: passenger.guardianRelationship,
       dateOfBirth: passenger.dateOfBirth,
       assignedSeatId,
       fareBeforeDiscount: fare.fareBeforeDiscount,
       discountAmount: fare.discountAmount,
       finalFare: fare.fareAfterDiscount,
     };
+  }
+  #age(dateOfBirth) {
+    const born = new Date(`${dateOfBirth}T00:00:00Z`);
+    if (Number.isNaN(born.getTime()) || born > new Date())
+      throw new ValidationError('A valid dateOfBirth is required');
+    const today = new Date();
+    let age = today.getUTCFullYear() - born.getUTCFullYear();
+    if (
+      today.getUTCMonth() < born.getUTCMonth() ||
+      (today.getUTCMonth() === born.getUTCMonth() && today.getUTCDate() < born.getUTCDate())
+    )
+      age -= 1;
+    return age;
+  }
+  #validateIdentities(passengers) {
+    const numbers = passengers.map((passenger, index) => passenger.passengerNumber ?? index + 1);
+    if (
+      new Set(numbers).size !== passengers.length ||
+      numbers.some((number, index) => number !== index + 1)
+    )
+      throw new ValidationError('passengerNumber must be consecutive starting at 1');
+    const identities = new Set();
+    passengers.forEach((passenger, index) => {
+      passenger.passengerNumber = numbers[index];
+      const age = this.#age(passenger.dateOfBirth);
+      const prepared = this.passengerIdentityService.prepare(passenger);
+      if (prepared.identityNumberHash) {
+        if (identities.has(prepared.identityNumberHash))
+          throw new ValidationError('Duplicate passenger identity');
+        identities.add(prepared.identityNumberHash);
+      }
+      if (passenger.identityType === IDENTITY_TYPE.DEPENDENT) {
+        const guardian = passengers[numbers.indexOf(Number(passenger.guardianPassengerNumber))];
+        if (
+          !guardian ||
+          guardian === passenger ||
+          guardian.identityType === IDENTITY_TYPE.DEPENDENT
+        )
+          throw new ValidationError(
+            'A dependent requires an identified guardian in the same booking'
+          );
+        if (this.#age(guardian.dateOfBirth) < this.nicRequiredAge)
+          throw new ValidationError('A guardian must be at least the configured adult age');
+      } else if (age < this.nicRequiredAge && passenger.identityType === IDENTITY_TYPE.NIC) {
+        throw new ValidationError(
+          'Passengers below the configured age should use dependent identity'
+        );
+      }
+    });
   }
 }
 module.exports = BookingPassengerService;

@@ -1,1 +1,13 @@
-'use client'; import {useMutation,useQueryClient} from '@tanstack/react-query'; import {bookingService} from '@/services/booking.service'; import {queryKeys} from '@/constants/query-keys'; export function useCreateBookingHold(){const client=useQueryClient();return useMutation({mutationFn:({input,key}:{input:unknown;key:string})=>bookingService.createBookingHold(input,key),onSuccess:(booking:any)=>client.setQueryData(queryKeys.bookings.details(booking.id),booking)})}
+'use client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { bookingService } from '@/services/booking.service';
+import { queryKeys } from '@/constants/query-keys';
+export function useCreateBookingHold() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ input, key }: { input: unknown; key: string }) =>
+      bookingService.createBookingHold(input, key),
+    onSuccess: (booking: any) =>
+      client.setQueryData(queryKeys.bookings.details(booking.bookingId), booking),
+  });
+}

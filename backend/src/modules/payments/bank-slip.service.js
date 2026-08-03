@@ -31,6 +31,7 @@ class BankSlipService {
     const payment = await this.paymentService.getPaymentById(input.paymentId, {
       id: input.userId,
       role: input.role,
+      guestBookingId: input.guestBookingId,
     });
     if (payment.method !== 'BANK_SLIP' || !['PENDING', 'REJECTED'].includes(payment.status))
       throw new BankSlipError('Payment does not accept a bank-slip upload');

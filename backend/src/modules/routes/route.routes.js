@@ -18,6 +18,7 @@ function createRouteAdminRouter(services) {
   router.patch('/:routeId', controller.update);
   router.delete('/:routeId', controller.remove);
   router.post('/:routeId/stations', controller.addStation);
+  router.post('/:routeId/clone-reverse', controller.cloneReverse);
   router.patch('/:routeId/stations/reorder', controller.reorderStations);
   router.patch('/:routeId/stations/:routeStationId', controller.updateRouteStation);
   router.delete('/:routeId/stations/:routeStationId', controller.removeStation);

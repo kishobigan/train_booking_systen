@@ -30,9 +30,6 @@ const modelOptions = (sequelize, tableName, extra = {}) => ({
   tableName,
   freezeTableName: true,
   underscored: true,
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  deletedAt: 'deleted_at',
   ...extra,
 });
 

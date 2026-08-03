@@ -28,6 +28,7 @@ class BookingService {
     holdMinutes = Number(process.env.BOOKING_HOLD_MINUTES || 10),
     maximumPassengers = Number(process.env.MAX_PASSENGERS_PER_BOOKING || 6),
     clock = () => new Date(),
+    guestBookingAccessService,
   }) {
     Object.assign(this, {
       bookingRepository,
@@ -44,6 +45,7 @@ class BookingService {
       auditService,
       bookingStatusRepository,
       accessControlService,
+      guestBookingAccessService,
     });
     this.holdMinutes = holdMinutes;
     this.maximumPassengers = maximumPassengers;
@@ -55,9 +57,7 @@ class BookingService {
     const input = this.#normalizeHold(rawInput);
     this.validateBookingRequest(input);
     if (input.idempotencyKey)
-      throw new ValidationError(
-        'Durable idempotency is unavailable until the idempotency_keys migration is added'
-      );
+      throw new ValidationError('Durable booking-hold idempotency is not configured');
     const queryOptions = input.transaction ? { transaction: input.transaction } : {};
     const journey = await this.journeyService.getJourney(input.journeyId, queryOptions);
     this.validateJourneyForBooking(journey);
@@ -106,6 +106,7 @@ class BookingService {
         {
           bookingReference: this.generateBookingReference(),
           userId: input.userId,
+          createdByUserId: input.createdByUserId || null,
           journeyId: input.journeyId,
           originJourneyStationId: input.originJourneyStationId,
           destinationJourneyStationId: input.destinationJourneyStationId,
@@ -134,7 +135,19 @@ class BookingService {
           (passenger) => seatsById.get(passenger.journeySeatId).seatId
         ),
         transaction,
+        requireIdentity: !input.userId,
       });
+      let guestAccess;
+      if (!input.userId && this.guestBookingAccessService) {
+        guestAccess = this.guestBookingAccessService.issue();
+        await booking.update(
+          {
+            guestAccessTokenHash: guestAccess.hash,
+            guestAccessTokenExpiresAt: guestAccess.expiresAt,
+          },
+          { transaction }
+        );
+      }
       const bookingSeats = await this.bookingSeatService.bulkCreateBookingSeats({
         seats: input.passengers.map((passenger, index) => {
           const seat = seatsById.get(passenger.journeySeatId);
@@ -209,13 +222,17 @@ class BookingService {
           })
           .catch(() => undefined)
       );
-      return this.#holdResult(
-        booking,
-        resolved.segment,
-        input.passengers,
-        passengers,
-        revalidated.seats
-      );
+      return {
+        ...this.#holdResult(
+          booking,
+          resolved.segment,
+          input.passengers,
+          passengers,
+          revalidated.seats
+        ),
+        guestAccessToken: guestAccess?.token,
+        guestAccessTokenExpiresAt: guestAccess?.expiresAt,
+      };
     };
     try {
       return input.transaction
@@ -343,11 +360,12 @@ class BookingService {
   }
   /** Validate hold request shape and disallow frontend amount fields. */
   validateBookingRequest(input) {
-    if (!input.userId) throw new ValidationError('userId is required');
     if (!input.journeyId || !input.originJourneyStationId || !input.destinationJourneyStationId)
       throw new ValidationError('Journey and segment stations are required');
     this.validatePassengerCount(input.passengers?.length);
-    this.bookingPassengerService.validatePassengerList(input.passengers);
+    this.bookingPassengerService.validatePassengerList(input.passengers, {
+      requireIdentity: !input.userId,
+    });
     if (input.passengers.some((passenger) => !passenger.journeySeatId))
       throw new ValidationError('Every passenger requires journeySeatId');
     if (!input.contact?.fullName || (!input.contact.email && !input.contact.phone))
@@ -360,6 +378,7 @@ class BookingService {
     throw new AuthorizationError('You cannot access this booking');
   }
   async assertBookingAccess(booking, actor) {
+    if (actor?.guestBookingId === booking.id) return true;
     if (actor?.role === 'SUPER_ADMIN' || booking.userId === actor?.id) return true;
     if (actor?.role === 'ADMIN')
       return this.accessControlService.assertAdminJourneyAccess({

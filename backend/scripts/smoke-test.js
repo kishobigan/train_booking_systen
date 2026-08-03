@@ -55,16 +55,20 @@ async function main() {
     await expectResponse(new URL(`${api.pathname}${path}`, api));
   }
 
-  const [route, train, journey, users] = await Promise.all([
+  const [route, train, journeys, users] = await Promise.all([
     models.Route.findOne({ where: { code: 'CMB-BAD-MAIN', isActive: true } }),
     models.Train.findOne({ where: { trainNumber: '1005', isActive: true } }),
-    models.Journey.findOne({ where: { serviceNumber: 'SEED-1005' } }),
+    models.Journey.findAll({
+      where: { serviceNumber: ['DEMO-1005-A', 'DEMO-1005-B', 'DEMO-1006-R'] },
+      order: [['scheduledDepartureAt', 'ASC']],
+    }),
     models.User.unscoped().findAll({
       where: { email: process.env.SEED_SUPER_ADMIN_EMAIL || 'superadmin@railway.local' },
     }),
   ]);
-  if (!route || !train || !journey || users.length !== 1)
+  if (!route || !train || journeys.length !== 3 || users.length !== 1)
     throw new Error('Required seed records are missing');
+  const journey = journeys.find((item) => item.serviceNumber === 'DEMO-1005-A');
 
   const endpoints = await models.Station.findAll({
     where: { id: [route.startStationId, route.endStationId] },
@@ -101,6 +105,20 @@ async function main() {
       passengers: [{ passengerType: 'ADULT' }],
     }),
   });
+
+  const coachCounts = await models.Coach.findAll({ where: { trainId: train.id } });
+  if (
+    coachCounts.length !== 8 ||
+    coachCounts.filter((coach) => coach.reservationType === 'RESERVED').length !== 3 ||
+    coachCounts.filter((coach) => coach.reservationType === 'UNRESERVED').length !== 5
+  ) throw new Error('Seed train coach configuration is invalid');
+
+  const admin = await models.User.findOne({ where: { email: process.env.SEED_ADMIN_EMAIL } });
+  const staff = await models.User.findOne({ where: { email: process.env.SEED_STAFF_EMAIL } });
+  if ((await models.AdminJourney.count({ where: { adminUserId: admin.id, isActive: true } })) < 3)
+    throw new Error('Admin journey assignments are incomplete');
+  if ((await models.StaffStation.count({ where: { staffUserId: staff.id, stationId: origin.stationId, isActive: true } })) !== 1)
+    throw new Error('Staff Colombo Fort assignment is missing');
 
   const credentials = [
     ['SEED_SUPER_ADMIN_EMAIL', 'SEED_SUPER_ADMIN_PASSWORD'],
