@@ -40,4 +40,43 @@ function search(query = {}) {
     limit,
   };
 }
-module.exports = { id, search };
+function upcoming(query = {}) {
+  const originStationId = query.originStationId || null;
+  const destinationStationId = query.destinationStationId || null;
+  if (originStationId && !UUID.test(originStationId))
+    throw new ValidationError('originStationId must be a valid UUID');
+  if (destinationStationId && !UUID.test(destinationStationId))
+    throw new ValidationError('destinationStationId must be a valid UUID');
+  if (originStationId && destinationStationId && originStationId === destinationStationId)
+    throw new ValidationError('Origin and destination must differ');
+  for (const field of ['dateFrom', 'dateTo']) {
+    if (query[field] && (!/^\d{4}-\d{2}-\d{2}$/.test(query[field]) || Number.isNaN(new Date(`${query[field]}T00:00:00Z`).getTime())))
+      throw new ValidationError(`${field} must use YYYY-MM-DD`);
+  }
+  const passengerCount = Number(query.passengerCount || 1);
+  if (!Number.isInteger(passengerCount) || passengerCount < 1 || passengerCount > fareConfig.maximumPassengersPerBooking)
+    throw new ValidationError('Invalid passengerCount');
+  if (query.coachClass && !Object.values(COACH_CLASS).includes(query.coachClass))
+    throw new ValidationError('Unsupported coachClass');
+  const page = Number(query.page || 1);
+  const limit = Number(query.limit || 20);
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 100)
+    throw new ValidationError('Invalid pagination');
+  const sortBy = ['departure', 'duration', 'availability'].includes(query.sortBy)
+    ? query.sortBy
+    : 'departure';
+  const sortOrder = String(query.sortOrder || 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+  return {
+    originStationId,
+    destinationStationId,
+    dateFrom: query.dateFrom || null,
+    dateTo: query.dateTo || null,
+    coachClass: query.coachClass || null,
+    passengerCount,
+    page,
+    limit,
+    sortBy,
+    sortOrder,
+  };
+}
+module.exports = { id, search, upcoming };

@@ -5,7 +5,7 @@ import { Journey, Station } from '@/types/domain';
 
 export const stationService = createResourceService<Station>('/stations');
 export const routeService = createResourceService<Record<string, unknown>>('/routes');
-export const journeyService = { ...createResourceService<Journey>('/journeys'), search: async (params: Record<string, unknown>) => unwrap<Journey[]>((await apiClient.get('/journeys/search', { params })).data) };
+export const journeyService = { ...createResourceService<Journey>('/journeys'), search: async (params: Record<string, unknown>) => unwrap<Journey[]>((await apiClient.get('/journeys/search', { params })).data), upcoming: async (params: Record<string, unknown>) => unwrap<Journey[]>((await apiClient.get('/journeys/upcoming', { params })).data) };
 export const bookingService = { ...createResourceService<Record<string, unknown>>('/bookings'), createIdempotent: async (input: unknown, key: string) => unwrap((await apiClient.post('/bookings', input, { headers: { 'Idempotency-Key': key } })).data), cancel: async (id: string) => unwrap((await apiClient.post(`/bookings/${id}/cancel`)).data) };
 export const paymentService = { ...createResourceService<Record<string, unknown>>('/payments'), initiate: async (input: unknown, key: string) => unwrap((await apiClient.post('/payments', input, { headers: { 'Idempotency-Key': key } })).data), status: async (id: string) => unwrap((await apiClient.get(`/payments/${id}/status`)).data) };
 export const waitlistService = createResourceService<Record<string, unknown>>('/waitlist');

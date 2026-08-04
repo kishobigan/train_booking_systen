@@ -13,6 +13,13 @@ class JourneyController {
       pagination: result.pagination,
     });
   });
+  upcoming = asyncHandler(async (req, res) => {
+    const result = await this.service.searchUpcomingJourneys(validator.upcoming(req.query));
+    res.json({
+      ...apiResponse.success({ search: result.search, items: result.items }),
+      pagination: result.pagination,
+    });
+  });
   details = asyncHandler(async (req, res) => {
     const journey = await this.service.getPublicJourneyDetails(validator.id(req.params.journeyId));
     res.json(

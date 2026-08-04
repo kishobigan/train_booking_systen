@@ -59,6 +59,17 @@ module.exports = Object.freeze({
       text: 'A seat is available for {{originStation}} to {{destinationStation}}. Accept before {{offerExpiresAt}}: {{actionUrl}}',
     },
   },
+  [TEMPLATE.BOOKING_ACCESS_OTP]: {
+    requiredVariables: ['customerName', 'otpCode', 'expiresAt'],
+    email: {
+      subject: 'Your booking access verification code',
+      text: 'Hello {{customerName}}, your booking access verification code is {{otpCode}}. It expires at {{expiresAt}}.',
+      html: '<h1>Your booking access code</h1><p>Hello {{customerName}},</p><p>Your verification code is <strong>{{otpCode}}</strong>.</p><p>It expires at {{expiresAt}}.</p>',
+    },
+    sms: {
+      text: 'Your booking access code is {{otpCode}}. It expires at {{expiresAt}}.',
+    },
+  },
   [TEMPLATE.PAYMENT_SUCCESS]: {
     requiredVariables: [
       'customerName',

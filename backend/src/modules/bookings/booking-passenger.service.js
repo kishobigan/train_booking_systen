@@ -286,6 +286,12 @@ class BookingPassengerService {
       numbers.some((number, index) => number !== index + 1)
     )
       throw new ValidationError('passengerNumber must be consecutive starting at 1');
+    const primary = passengers[0];
+    if (!primary) throw new ValidationError('At least one passenger is required');
+    if (primary.identityType === IDENTITY_TYPE.DEPENDENT)
+      throw new ValidationError('Primary passenger cannot be a dependent traveller');
+    if (![IDENTITY_TYPE.NIC, IDENTITY_TYPE.PASSPORT].includes(primary.identityType))
+      throw new ValidationError('Primary passenger identity is required');
     const identities = new Set();
     passengers.forEach((passenger, index) => {
       passenger.passengerNumber = numbers[index];

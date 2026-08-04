@@ -25,6 +25,27 @@ class WaitlistRepository extends BaseRepository {
   findByUserId(userId, options = {}) {
     return this.findAll({ userId }, { ...options, order: [['createdAt', 'DESC']] });
   }
+  findByContact({ email, phone }, options = {}) {
+    const clauses = [];
+    if (email) clauses.push({ contactEmail: email });
+    if (phone) clauses.push({ contactPhone: phone });
+    if (!clauses.length) return Promise.resolve([]);
+    return this.findAll(
+      { [Op.or]: clauses },
+      {
+        ...options,
+        include:
+          options.include || [
+            { model: require('../../models').Journey, as: 'journey' },
+            { model: require('../../models').JourneyStation, as: 'originJourneyStation' },
+            { model: require('../../models').JourneyStation, as: 'destinationJourneyStation' },
+            { model: require('../../models').Seat, as: 'offeredSeat' },
+            { model: require('../../models').Booking, as: 'convertedBooking' },
+          ],
+        order: options.order || [['createdAt', 'DESC']],
+      }
+    );
+  }
   findByJourneyId(journeyId, options = {}) {
     return this.findByJourney(journeyId, options);
   }

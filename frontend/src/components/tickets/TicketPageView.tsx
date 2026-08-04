@@ -72,7 +72,7 @@ export function TicketPageView({ bookingId }: { bookingId: string }) {
         <button className="button" onClick={() => window.print()}>
           <Printer size={18} /> Print ticket
         </button>
-        <Link className="button button-secondary" href="/bookings">
+        <Link className="button button-secondary" href="/booking-access">
           Return to bookings
         </Link>
       </div>

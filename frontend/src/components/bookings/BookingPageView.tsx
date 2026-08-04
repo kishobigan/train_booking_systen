@@ -251,7 +251,7 @@ function Recovery() {
     <div className="shell center">
       <h1>Your booking draft is incomplete</h1>
       <p className="muted">Select a journey and seats before entering passenger details.</p>
-      <Link className="button" href="/journeys">
+      <Link className="button" href="/find-trains">
         Find a journey
       </Link>
     </div>

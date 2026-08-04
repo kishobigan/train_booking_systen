@@ -1,1 +1,5 @@
-import {JourneySearchForm} from '@/components/journeys/JourneySearchForm'; import {Card} from '@/components/ui/Card'; export default function JourneySearchPage(){return <div className="shell stack"><div className="page-heading"><h1>Find your train</h1><p className="muted">Search scheduled services by route, date, and passenger count.</p></div><Card><JourneySearchForm variant="full"/></Card><div className="notice">Choose distinct origin and destination stations. Availability is checked for the exact segment you travel.</div></div>}
+import { redirect } from 'next/navigation';
+
+export default function JourneySearchPage() {
+  redirect('/find-trains');
+}

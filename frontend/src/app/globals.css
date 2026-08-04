@@ -186,6 +186,16 @@ select {
   color: var(--color-primary);
   border: 1px solid var(--color-primary);
 }
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.table-actions .button {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 0.8125rem;
+}
 .state {
   min-height: 180px;
   display: flex;

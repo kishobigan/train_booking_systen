@@ -5,6 +5,7 @@ module.exports = (journeyService) => {
   const router = express.Router();
   const controller = new JourneyController(journeyService);
   router.get('/search', controller.search);
+  router.get('/upcoming', controller.upcoming);
   router.get('/:journeyId', controller.details);
   return router;
 };

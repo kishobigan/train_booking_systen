@@ -27,16 +27,15 @@ export function AppHeader() {
           {menuOpen ? <X aria-hidden /> : <Menu aria-hidden />}
         </button>
         <nav id="primary-navigation" className={menuOpen ? 'open' : ''} aria-label="Primary">
-          <Link className={path.startsWith('/journeys') ? 'active' : ''} href="/journeys">Find trains</Link>
-          <Link className={path.startsWith('/bookings') ? 'active' : ''} href="/bookings">My bookings</Link>
-          <Link className={path.startsWith('/waitlist') ? 'active' : ''} href="/waitlist">Waitlist</Link>
+          <Link className={path.startsWith('/find-trains') || path.startsWith('/journeys') ? 'active' : ''} href="/find-trains">Find Trains</Link>
+          <Link className={path.startsWith('/booking-access') ? 'active' : ''} href="/booking-access">Booking & Waitlist</Link>
           {user ? (
             <Link className="user-label" href="/management/dashboard">
               <UserRound size={17} />
               {user.fullName}
             </Link>
           ) : (
-            <Link className="staff-login-link" href="/login">Staff login</Link>
+            <Link className={path.startsWith('/staff-login') || path.startsWith('/login') ? 'active staff-login-link' : 'staff-login-link'} href="/staff-login">Staff Login</Link>
           )}
         </nav>
       </div>

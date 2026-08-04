@@ -101,6 +101,11 @@ class BookingRepository extends BaseRepository {
         { model: Payment, as: 'payments' },
         { model: BookingStatusHistory, as: 'statusHistory' },
       ],
+      order: [
+        [{ model: BookingPassenger, as: 'passengers' }, 'passengerNumber', 'ASC'],
+        [{ model: BookingSeat, as: 'bookingSeats' }, 'createdAt', 'ASC'],
+        [{ model: Payment, as: 'payments' }, 'createdAt', 'DESC'],
+      ],
     });
   }
 }

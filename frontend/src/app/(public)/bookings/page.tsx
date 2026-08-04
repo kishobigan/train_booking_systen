@@ -1,1 +1,5 @@
-import { EmptyState } from '@/components/ui/StatusState'; export default function BookingsPage(){return <div className="shell"><div className="page-heading"><h1>My bookings</h1></div><EmptyState title="No bookings to show" message="Your upcoming and previous journeys will appear here."/></div>}
+import { redirect } from 'next/navigation';
+
+export default function BookingsPage() {
+  redirect('/booking-access');
+}

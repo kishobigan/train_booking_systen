@@ -15,6 +15,7 @@ const TrainRepository = require('../trains/train.repository');
 const { normalizeJourneyInput } = require('./journey.dto');
 const logger = require('../../config/logger');
 const { normalizePagination, paginationMeta } = require('../../common/utils/pagination');
+const railwayTimeZone = require('../../config/timezone');
 
 class JourneyService {
   constructor({
@@ -68,6 +69,60 @@ class JourneyService {
   searchJourneys(filters = {}, options = {}) {
     if (filters.originStationId) return this.searchPublicJourneys(filters, options);
     return this.journeyRepository.search(filters, options);
+  }
+
+  async searchUpcomingJourneys(filters = {}, options = {}) {
+    const { page, limit, offset } = normalizePagination(filters);
+    const rows = await this.journeyRepository.searchUpcomingJourneys(
+      {
+        ...filters,
+        dateFrom: filters.dateFrom || this.#todayLocal(),
+        coachClass: filters.coachClass || null,
+        passengerCount: filters.passengerCount || 1,
+        limit,
+        offset,
+      },
+      options
+    );
+    const totalItems = Number(rows[0]?.totalCount || 0);
+    return {
+      search: {
+        originStationId: filters.originStationId || null,
+        destinationStationId: filters.destinationStationId || null,
+        dateFrom: filters.dateFrom || this.#todayLocal(),
+        dateTo: filters.dateTo || null,
+        passengerCount: filters.passengerCount || 1,
+        coachClass: filters.coachClass || null,
+      },
+      items: rows.map((row) => ({
+        journeyId: row.journeyId,
+        serviceNumber: row.serviceNumber,
+        train: { id: row.trainId, trainNumber: row.trainNumber, name: row.trainName },
+        route: { id: row.routeId, code: row.routeCode, name: row.routeName },
+        origin: {
+          journeyStationId: row.originJourneyStationId,
+          stationId: row.originStationId,
+          code: row.originCode,
+          name: row.originName,
+          sequenceNumber: row.originSequence,
+          scheduledDepartureAt: row.originDepartureAt,
+        },
+        destination: {
+          journeyStationId: row.destinationJourneyStationId,
+          stationId: row.destinationStationId,
+          code: row.destinationCode,
+          name: row.destinationName,
+          sequenceNumber: row.destinationSequence,
+          scheduledArrivalAt: row.destinationArrivalAt,
+        },
+        durationMinutes: row.durationMinutes,
+        status: row.status,
+        availableSeatCount: Number(row.availableSeatCount),
+        minimumFare: null,
+        currency: 'LKR',
+      })),
+      pagination: paginationMeta({ page, limit, totalItems }),
+    };
   }
 
   async searchPublicJourneys(filters, options = {}) {
@@ -127,6 +182,15 @@ class JourneyService {
     if (['CANCELLED', 'COMPLETED'].includes(journey.status))
       throw new ConflictError('Journey is not publicly searchable');
     return journey;
+  }
+
+  #todayLocal() {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: railwayTimeZone.timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
   }
 
   async updateJourney(id, input, options = {}) {

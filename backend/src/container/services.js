@@ -56,6 +56,7 @@ const JourneySeatService = require('../modules/journeys/journey-seat.service');
 const JourneyCoachService = require('../modules/journeys/journey-coach.service');
 const PassengerIdentityService = require('../modules/bookings/passenger-identity.service');
 const GuestBookingAccessService = require('../modules/bookings/guest-booking-access.service');
+const BookingAccessService = require('../modules/bookings/booking-access.service');
 const passengerIdentityConfig = require('../config/passenger-identity');
 const guestBookingConfig = require('../config/guest-booking');
 
@@ -136,6 +137,13 @@ const guestBookingAccessService = new GuestBookingAccessService({
   bookingRepository: repositories.bookingRepository,
   config: guestBookingConfig,
 });
+const bookingAccessService = new BookingAccessService({
+  bookingRepository: repositories.bookingRepository,
+  waitlistRepository: repositories.waitlistRepository,
+  passengerIdentityService,
+  guestBookingAccessService,
+  notificationService,
+});
 const bookingPassengerService = new BookingPassengerService({
   bookingPassengerRepository: repositories.bookingPassengerRepository,
   journeySeatRepository: repositories.journeySeatRepository,
@@ -197,6 +205,7 @@ const services = {
   allocationService,
   passengerIdentityService,
   guestBookingAccessService,
+  bookingAccessService,
   guestBookingConfig,
   fareRuleService: new FareRuleService(repositories.fareRuleRepository),
   fareRuleClassService: new FareRuleClassService(repositories.fareRuleClassRepository),
