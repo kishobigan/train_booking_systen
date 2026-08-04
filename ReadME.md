@@ -1,85 +1,424 @@
 # Train Booking System
 
-Full-stack railway booking application with an Express/Socket.IO backend, Next.js frontend, PostgreSQL database, and background worker.
+A full-stack railway reservation platform built with **Node.js (Express)**, **Next.js**, **PostgreSQL**, **Socket.IO**, and **Docker**. The system demonstrates a segment-based seat booking approach where the same physical seat can be booked by multiple passengers for different, non-overlapping sections of a journey.
 
-## Docker quick start
+The project includes:
 
-Requirements:
+- Public passenger booking portal
+- Super Admin Portal
+- Admin Portal
+- Staff Portal
+- Real-time seat availability
+- Guest booking (no registration required)
+- Payment approval workflow
+- Waitlist management
+- Background worker for scheduled jobs
 
-- Docker Engine or Docker Desktop
-- Docker Compose v2
+---
 
-Build, initialize, verify, and start the complete application:
+# Repository
+
+Clone the project using either HTTPS or SSH.
+
+### HTTPS
 
 ```bash
-docker compose up --build
+git clone https://github.com/kishobigan/train_booking_systen.git
 ```
 
-Compose waits for PostgreSQL, runs pending migrations, directly creates only the initial Super Admin, starts the API, and then provisions all remaining demonstration records through authenticated Super Admin APIs. The worker and frontend start only after bootstrap succeeds, followed by one-shot smoke verification.
+### SSH
 
-Open the frontend using the configured frontend URL. The backend API and WebSocket URLs are defined by the existing frontend environment configuration. Seed credentials are defined by the `SEED_*` variables in [backend/.env.example](backend/.env.example); passwords are never printed by startup or verification.
+```bash
+git clone git@github.com:kishobigan/train_booking_systen.git
+```
 
-## Operations
+Move into the project directory.
 
-Stop the stack while retaining local data:
+```bash
+cd train_booking_systen
+```
+
+---
+
+# Quick Start
+
+## Requirements
+
+- Docker Desktop (Windows/macOS) or Docker Engine (Linux)
+- Docker Compose v2
+
+Start the complete application:
+
+```bash
+docker compose up --build -d
+```
+
+During the first startup Docker will automatically:
+
+- Build all services
+- Start PostgreSQL
+- Run database migrations
+- Seed demonstration data
+- Create the default users
+- Start the backend API
+- Start the worker service
+- Start the Next.js frontend
+
+The first build may take a few minutes depending on your internet connection.
+
+---
+
+# Accessing the Application
+
+Once all containers are running, open your browser and navigate to
+
+```
+http://localhost:3050
+```
+
+The application will be available from the public booking page.
+
+---
+
+# Public Booking Demonstration
+
+For the demonstration, use one of the seeded journeys.
+
+**Booking Date**
+
+Choose either:
+
+- **10 August**
+- **13 August**
+
+These journeys are already available in the seeded data.
+
+---
+
+## Booking Flow
+
+### Step 1
+
+Open the application.
+
+```
+http://localhost:3050
+```
+
+---
+
+### Step 2
+
+On the home page select:
+
+- Departure Station
+- Destination Station
+- Travel Date
+
+Choose either:
+
+- August 10
+- August 13
+
+Click **Find Trains**.
+
+---
+
+### Step 3
+
+A list of available journeys will appear.
+
+For each journey you can view:
+
+- Departure time
+- Arrival time
+- Journey duration
+- Available seats
+- Coach information
+
+Click **Book Now**.
+
+---
+
+### Step 4
+
+Select your preferred seat.
+
+The seat map updates in real time, preventing multiple users from reserving the same seat simultaneously.
+
+---
+
+### Step 5
+
+Enter passenger details.
+
+Guest users do **not** need to register.
+
+Simply provide the required passenger information.
+
+---
+
+### Step 6
+
+Review the fare summary.
+
+The fare is automatically calculated based on:
+
+- Selected stations
+- Journey segment
+- Seat type
+- Passenger count
+
+---
+
+### Step 7
+
+Choose the payment method.
+
+If Bank Slip payment is selected:
+
+- Upload the payment slip
+- Submit the booking
+
+The booking will remain in **Waiting for Payment Approval** until an administrator verifies the payment.
+
+---
+
+### Step 8
+
+After submission, the booking reference is generated.
+
+Passengers can later check the booking status using their NIC number.
+
+---
+
+# Staff Login
+
+The top navigation bar contains a **Staff Login** button.
+
+This portal provides access to the administration system.
+
+There are **three different user roles** available.
+
+- Super Admin
+- Admin
+- Staff
+
+Each role has different permissions inside the system.
+
+---
+
+# Default Login Credentials
+
+The seeded credentials are available in:
+
+```
+backend/.env.example
+```
+
+The default accounts are:
+
+| Role | Username | Password |
+|------|----------|----------|
+| Super Admin | `superadmin@railway.local` | `SuperAdmin@12345` |
+| Admin | `admin@railway.local` | `Admin@1234567` |
+| Staff | `staff@railway.local` | `Staff@1234567` |
+
+---
+
+# Demonstration Roles
+
+## Super Admin
+
+The Super Admin has complete control over the railway system.
+
+Main capabilities include:
+
+- Dashboard
+- User Management
+- Station Management
+- Route Management
+- Train Management
+- Journey Management
+- Payment Approval
+- Revenue Reports
+- Occupancy Reports
+- Assign Admins
+- Assign Staff
+- System Configuration
+
+---
+
+## Admin
+
+Admins manage only the journeys assigned to them.
+
+Available features include:
+
+- Dashboard
+- Assigned Journeys
+- Booking Management
+- Passenger Management
+- Payment Approval
+- Seat Availability
+- Journey Updates
+
+---
+
+## Staff
+
+Staff members are responsible for their assigned railway station.
+
+They can:
+
+- Create bookings
+- Search passengers
+- View seat availability
+- Assist passengers
+- Manage station operations
+
+---
+
+# Operations
+
+Stop the application
 
 ```bash
 docker compose down
 ```
 
-Follow logs:
-
-```bash
-docker compose logs -f
-```
-
-Inspect service and health status:
+View running services
 
 ```bash
 docker compose ps
 ```
 
-Re-run the one-shot verification:
+View logs
 
 ```bash
-docker compose run --rm smoke-test
+docker compose logs -f
 ```
 
-## Clean local reset
+Restart containers
 
-The following command permanently removes the Compose-managed local database and uploaded bank-slip volumes:
+```bash
+docker compose restart
+```
+
+---
+
+# Reset the Local Database
+
+To completely remove all local data and recreate the system:
 
 ```bash
 docker compose down --volumes
-docker compose up --build
+docker compose up --build -d
 ```
 
-Only use `--volumes` when deleting all local application data is intentional. Volume deletion is never performed during normal startup.
+> **Warning**
+>
+> This permanently deletes the local PostgreSQL database and uploaded files.
 
-## Configuration
+---
 
-- Backend, database, authentication, provider, worker, and seed settings: `backend/.env.example`
-- Browser-facing API and WebSocket settings: `frontend/.env.example`
-- Service ports, builds, dependencies, health checks, and persistent volumes: `docker-compose.yml`
+# Project Architecture
 
-Optional Stripe, email, SMS, Redis-backed WebSocket, and bank-payment integrations retain their existing disabled or configured fallback behavior. No optional provider is required for core local startup.
+```
+Frontend (Next.js)
+        │
+        │
+        ▼
+Backend (Express + Socket.IO)
+        │
+        │
+        ▼
+PostgreSQL Database
+        │
+        ▼
+Background Worker
+```
 
-## Local development without full Compose
+---
 
-Install the Node.js version selected by the Dockerfiles, copy the relevant environment examples to local environment files, and use the existing package scripts in `backend/package.json` and `frontend/package.json`.
+# Main Features
 
-## Interview Demonstration
+- Guest passenger booking
+- Segment-based seat allocation
+- Real-time seat availability
+- Journey search
+- Distance-based fare calculation
+- Payment approval workflow
+- Waitlist management
+- Guest booking using NIC
+- Role-based authentication
+- Station-based staff access
+- Journey-based admin access
+- Super Admin system management
+- Background jobs for booking expiration
+- Dockerized deployment
 
-Credentials are configured with `SEED_SUPER_ADMIN_*`, `SEED_ADMIN_*`, and `SEED_STAFF_*` environment variables. Startup logs never print passwords or access tokens.
+---
 
-The bootstrap creates 79 ordered Colombo Fort–Badulla stations, direction-correct outbound and return routes, one configurable train with three reserved and five unreserved coaches, 120 reserved seats, two outbound journeys, one return journey, fare rules, and role assignments. Journey dates are calculated relative to startup and stable service numbers prevent duplicate records.
+# Configuration
 
-Demonstration flow:
+Environment configuration files:
 
-1. Search Colombo Fort to Badulla on the public landing page and open a seeded journey.
-2. Inspect segment-specific availability, choose reserved seats, request a distance-based fare, and create a guest booking.
-3. Sign in as Super Admin to inspect the complete network, users, audit trail, revenue, and occupancy.
-4. Sign in as Admin to inspect the three assigned journeys.
-5. Sign in as Staff to inspect the Colombo Fort station scope.
+Backend
 
-Seat allocations use half-open station intervals: `[originSequence, destinationSequence)`. Adjacent bookings may therefore reuse one physical seat at their shared station, while PostgreSQL overlap protection rejects intersecting allocations. Journey station, coach, and seat snapshots preserve historical configuration. Availability changes are published through Socket.IO, and expired holds and waitlist offers are processed by the worker.
+```
+backend/.env.example
+```
+
+Frontend
+
+```
+frontend/.env.example
+```
+
+Docker
+
+```
+docker-compose.yml
+```
+
+These files contain all configurable values required for local development.
+
+---
+
+# Technology Stack
+
+### Frontend
+
+- Next.js
+- React
+- Tailwind CSS
+- Socket.IO Client
+
+### Backend
+
+- Node.js
+- Express.js
+- Sequelize ORM
+- Socket.IO
+- JWT Authentication
+
+### Database
+
+- PostgreSQL
+
+### Infrastructure
+
+- Docker
+- Docker Compose
+
+---
+
+# Notes
+
+- Passenger accounts are **not required** for booking.
+- Staff credentials are seeded automatically during the initial startup.
+- Payment approval is performed through the Admin Portal.
+- Booking status can be checked using the passenger NIC number.
+- Real-time seat updates are synchronized using Socket.IO.
+- The demonstration data is automatically generated when running Docker Compose for the first time.
